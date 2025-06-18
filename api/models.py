@@ -69,3 +69,35 @@ class Proyecto(db.Model):
     fecha = db.Column(db.Date, nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
 
+class Sboom(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text, nullable=True)
+    fecha = db.Column(db.Date, nullable=False)
+    proyecto_id = db.Column(db.Integer, db.ForeignKey('proyecto.id'), nullable=False)
+    dependencias = db.relationship('Dependencia', backref='sboom', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nombre': self.nombre,
+            'descripcion': self.descripcion,
+            'fecha': self.fecha,
+            'proyecto_id': self.proyecto_id,
+            'dependencias': [d.to_dict() for d in self.dependencias]
+        }
+
+class Dependencia(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    version = db.Column(db.String(50), nullable=True)
+    sboom_id = db.Column(db.Integer, db.ForeignKey('sboom.id'), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nombre': self.nombre,
+            'version': self.version,
+            'sboom_id': self.sboom_id
+        }
+
