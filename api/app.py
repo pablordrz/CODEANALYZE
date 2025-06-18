@@ -4,7 +4,7 @@ import toml
 from models import db, Usuario, Proyecto, Sboom, Dependencia
 from resources import UsuarioListResource, UsuarioResource, ProyectoListResource, ProyectoResource
 from flask_cors import CORS
-from flask_praetorian import Praetorian, auth_required
+from flask_praetorian import Praetorian, auth_required, current_user
 from datetime import timedelta, date
 import os
 import zipfile
@@ -59,11 +59,13 @@ class ProyectoUploadResource(Resource):
         """
         from models import Proyecto, Sboom, Dependencia  # Importar modelos necesarios
 
+        user = current_user()
         # 1. Verificar que el proyecto existe y pertenece al usuario autenticado
-        proyecto = Proyecto.query.filter_by(id=proyecto_id, usuario_id=proyecto_id).first()
+        proyecto = Proyecto.query.filter_by(id=proyecto_id, usuario_id=user.id).first()
         if not proyecto:
             return {'error': 'Proyecto no encontrado o no tienes permiso para acceder a él'}, 404
 
+        
         # 2. Validar el archivo
         if 'file' not in request.files or request.files['file'].filename == '':
             return {'error': 'No se seleccionó ningún archivo'}, 400
@@ -77,6 +79,8 @@ class ProyectoUploadResource(Resource):
             try:
                 zip_path = os.path.join(temp_dir, secure_filename(file.filename))
                 file.save(zip_path)
+                
+                
 
                 extract_path = os.path.join(temp_dir, 'extracted')
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -117,7 +121,8 @@ class ProyectoUploadResource(Resource):
                                             all_dependencies.append(paquete)
                         except Exception:
                             continue # Ignorar archivos no legibles
-
+                
+                
                 # 5. Guardar dependencias en la base de datos en la tabla Sboom y Dependencia
                 unique_dependencies = sorted(list(set(all_dependencies)))
                 # Crear Sboom asociado al proyecto
@@ -129,6 +134,8 @@ class ProyectoUploadResource(Resource):
                 )
                 db.session.add(sboom)
                 db.session.commit()  # Para obtener el id del sboom
+                
+                
 
                 # Crear Dependencia para cada dependencia extraída
                 for dep in unique_dependencies:
