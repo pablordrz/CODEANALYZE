@@ -10,8 +10,6 @@ import os
 import zipfile
 import tempfile
 from werkzeug.utils import secure_filename
-import json
-import xml.etree.ElementTree as ET
 import re
 
 app = Flask(__name__)
@@ -28,40 +26,6 @@ guard = Praetorian()
 guard.init_app(app, Usuario)  # Inicializamos con el modelo Usuario
 api = Api(app)
 
-def find_python_dependencies(content):
-    """Extrae dependencias de un archivo requirements.txt."""
-    return [line for line in content.splitlines() if line and not line.startswith('#')]
-
-def find_nodejs_dependencies(content):
-    """Extrae dependencias de un archivo package.json."""
-    dependencies = []
-    try:
-        data = json.loads(content)
-        if 'dependencies' in data:
-            dependencies.extend(data['dependencies'].keys())
-        if 'devDependencies' in data:
-            dependencies.extend(data['devDependencies'].keys())
-    except json.JSONDecodeError:
-        # El archivo puede estar malformado
-        pass
-    return dependencies
-
-def find_maven_dependencies(content):
-    """Extrae dependencias de un archivo pom.xml."""
-    dependencies = []
-    try:
-        # Eliminar namespaces para simplificar la búsqueda
-        content = re.sub(' xmlns="[^"]+"', '', content, count=1)
-        root = ET.fromstring(content)
-        for dep in root.findall('.//dependency'):
-            groupId = dep.find('groupId')
-            artifactId = dep.find('artifactId')
-            if groupId is not None and artifactId is not None:
-                dependencies.append(f"{groupId.text}:{artifactId.text}")
-    except ET.ParseError:
-        # El XML puede estar malformado
-        pass
-    return dependencies
 
 class AuthResource(Resource):
     def post(self):
@@ -123,14 +87,34 @@ class ProyectoUploadResource(Resource):
                 for root, _, files in os.walk(extract_path):
                     for filename in files:
                         try:
-                            with open(os.path.join(root, filename), 'r', encoding='utf-8', errors='ignore') as f:
-                                content = f.read()
-                            if filename == 'requirements.txt':
-                                all_dependencies.extend(find_python_dependencies(content))
-                            elif filename == 'package.json':
-                                all_dependencies.extend(find_nodejs_dependencies(content))
-                            elif filename == 'pom.xml':
-                                all_dependencies.extend(find_maven_dependencies(content))
+                            ruta_archivo = os.path.join(root, filename)
+                            with open(ruta_archivo, 'r', encoding='utf-8', errors='ignore') as f:
+                                contenido = f.read()
+                            # Detectar el lenguaje por la extensión del archivo
+                            if filename.endswith('.py'):
+                                # Buscar importaciones en archivos Python
+                                for linea in contenido.splitlines():
+                                    match = re.match(r'^\s*(import|from)\s+([a-zA-Z0-9_\.]+)', linea)
+                                    if match:
+                                        modulo = match.group(2).split('.')[0]
+                                        if modulo not in all_dependencies:
+                                            all_dependencies.append(modulo)
+                            elif filename.endswith('.js'):
+                                # Buscar require o import en archivos JavaScript
+                                for linea in contenido.splitlines():
+                                    match = re.search(r"(?:require\(['\"]([a-zA-Z0-9_\-\/]+)['\"]\))|(?:import\s+.*?['\"]([a-zA-Z0-9_\-\/]+)['\"])", linea)
+                                    if match:
+                                        modulo = match.group(1) or match.group(2)
+                                        if modulo and modulo not in all_dependencies:
+                                            all_dependencies.append(modulo)
+                            elif filename.endswith('.java'):
+                                # Buscar importaciones en archivos Java
+                                for linea in contenido.splitlines():
+                                    match = re.match(r'^\s*import\s+([a-zA-Z0-9_\.]+);', linea)
+                                    if match:
+                                        paquete = match.group(1).split('.')[0]
+                                        if paquete not in all_dependencies:
+                                            all_dependencies.append(paquete)
                         except Exception:
                             continue # Ignorar archivos no legibles
 
@@ -169,6 +153,37 @@ class ProyectoUploadResource(Resource):
             except Exception as e:
                 return {'error': f'Ocurrió un error interno durante el procesamiento: {str(e)}'}, 500
 
+class ProyectoDependenciasResource(Resource):
+    @auth_required
+    def get(self, proyecto_id):
+        from models import Sboom, Dependencia
+        # Buscar el último SBOM asociado al proyecto
+        sboom = Sboom.query.filter_by(proyecto_id=proyecto_id).order_by(Sboom.id.desc()).first()
+        if not sboom:
+            return {'error': 'No se encontró SBOM para este proyecto'}, 404
+        dependencias = [d.to_dict() for d in sboom.dependencias]
+        return {'proyecto_id': proyecto_id, 'sboom_id': sboom.id, 'dependencias': dependencias}, 200
+
+class ProyectoDependenciaUpdateResource(Resource):
+    @auth_required
+    def put(self, proyecto_id, dependencia_id):
+        from models import Sboom, Dependencia
+        data = request.get_json()
+        nueva_version = data.get('version')
+        if not nueva_version:
+            return {'error': 'Se requiere el campo "version"'}, 400
+        # Buscar el último SBOM asociado al proyecto
+        sboom = Sboom.query.filter_by(proyecto_id=proyecto_id).order_by(Sboom.id.desc()).first()
+        if not sboom:
+            return {'error': 'No se encontró SBOM para este proyecto'}, 404
+        # Buscar la dependencia dentro del SBOM
+        dependencia = Dependencia.query.filter_by(id=dependencia_id, sboom_id=sboom.id).first()
+        if not dependencia:
+            return {'error': 'No se encontró la dependencia para este proyecto'}, 404
+        dependencia.version = nueva_version
+        db.session.commit()
+        return {'message': 'Versión actualizada', 'dependencia': dependencia.to_dict()}, 200
+
 @app.route("/login", methods=["POST"])
 def login():
     """
@@ -194,6 +209,8 @@ api.add_resource(UsuarioResource, "/usuarios/<int:id>")
 api.add_resource(ProyectoListResource, "/proyectos")
 api.add_resource(ProyectoResource, "/proyectos/<int:id>")
 api.add_resource(ProyectoUploadResource, "/proyectos/<int:proyecto_id>/upload")
+api.add_resource(ProyectoDependenciasResource, "/proyectos/<int:proyecto_id>/dependencias")
+api.add_resource(ProyectoDependenciaUpdateResource, "/proyectos/<int:proyecto_id>/dependencias/<int:dependencia_id>")
 
 if __name__ == "__main__":
     with app.app_context():
