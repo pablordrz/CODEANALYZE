@@ -206,3 +206,10 @@ def sync_session():
         return jsonify({"message": "Session synchronized"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+    
+
+@app.route("/buscar")
+def buscar():
+    q = request.args.get('q')
+    return render_template("layout.html", footer='footer.html', content='buscar.html', nav='nav.html', q=q)
+
