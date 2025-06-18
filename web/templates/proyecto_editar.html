@@ -1,0 +1,128 @@
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-lg">
+    <div class="card-body">
+      <h1 class="card-title text-center mb-4">Editar Proyecto</h1>
+      <form id="editar-proyecto-form">
+
+        <div class="mb-3">
+          <label for="nombre" class="form-label">Nombre</label>
+          <input type="text" class="form-control" id="nombre" name="nombre" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="descripcion" class="form-label">Descripción</label>
+          <textarea class="form-control" id="descripcion" name="descripcion" rows="4"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="fecha" class="form-label">Fecha</label>
+          <input type="date" class="form-control" id="fecha" name="fecha" required>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-success btn-lg">Actualizar Proyecto</button>
+        </div>
+
+      </form>
+      <div id="mensaje" class="mt-3"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const API_BASE_URL = 'http://localhost:5001';
+  function obtenerToken() {
+    return localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+  }
+  document.addEventListener("DOMContentLoaded", async () => {
+    const token = obtenerToken();
+    const proyectoId = {{ proyecto.id }};
+    const apiUrl = `${API_BASE_URL}/proyectos/${proyectoId}`;
+  
+    if (!token) {
+      mostrarMensaje('Token no encontrado. Por favor inicia sesión.', 'danger');
+      return;
+    }
+  
+    try {
+      // Cargar datos del proyecto
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Error al cargar el proyecto: ${response.status}`);
+      }
+  
+      const data = await response.json();
+  
+      // Rellenar el formulario
+      document.getElementById("nombre").value = data.nombre || '';
+      document.getElementById("descripcion").value = data.descripcion || '';
+      const fecha = new Date(data.fecha);
+      document.getElementById("fecha").value = fecha.toISOString().split('T')[0];
+  
+      // Guardar el usuario_id
+      window.usuarioId = data.usuario_id;
+    } catch (error) {
+      mostrarMensaje(`Error al cargar los datos: ${error.message}`, 'danger');
+    }
+  
+    // Manejar el envío del formulario
+    const form = document.getElementById("editar-proyecto-form");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+  
+      try {
+        const body = {
+          nombre: document.getElementById("nombre").value,
+          descripcion: document.getElementById("descripcion").value,
+          fecha: document.getElementById("fecha").value,
+          usuario_id: window.usuarioId
+        };
+  
+        const response = await fetch(apiUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+  
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error al actualizar: ${response.status}`);
+        }
+  
+        const data = await response.json();
+        mostrarMensaje("Proyecto actualizado correctamente.", 'success');
+  
+        setTimeout(() => {
+          window.location.href = `/chat/${proyectoId}`;
+        }, 2000);
+      } catch (error) {
+        mostrarMensaje(`Error: ${error.message}`, 'danger');
+      }
+    });
+  });
+  
+  // Función para mostrar mensajes
+  function mostrarMensaje(mensaje, tipo) {
+    const mensajeDiv = document.getElementById("mensaje");
+    mensajeDiv.innerHTML = `
+      <div class="alert alert-${tipo} alert-dismissible fade show" role="alert">
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+  }
+  </script>
+{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

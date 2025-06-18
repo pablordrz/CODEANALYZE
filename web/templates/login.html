@@ -1,0 +1,112 @@
+{% block content %}
+<div class="row m-0"> <!-- Fila 2 del Contenedor -->
+    <div class="container-xl m-0" id="alert-container"><div class="alerta">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+          <div class="alert alert-dismissible alert-warning ">
+            <div class="row">
+                <div class="col-lg-8 col-10 text-start">
+                    <h4 class="alert-heading">Atención!</h4>
+                     {{ message }}
+                </div>
+                <div class="col-lg-4 col-2">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div></div>
+</div>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Iniciar Sesión</h3>
+                </div>
+                <div class="card-body">
+                    <form id="loginForm" onsubmit="return handleLogin(event)">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Usuario</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function handleLogin(event) {
+        event.preventDefault(); // Evita el envío tradicional del formulario
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        const data = {
+            username: username,
+            password: password
+        };
+
+        fetch('http://localhost:5001/login', {  
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Credenciales inválidas o error del servidor");
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Verifica que el token de acceso esté presente
+            console.log("Respuesta del servidor:", data);
+            if (data.access_token) {
+                // Guardar tokens en localStorage
+                localStorage.setItem('access_token', data.access_token);
+                // Sincronizar sesión con el backend
+                fetch('/sync-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ access_token: data.access_token })
+                });
+                if (data.refresh_token) {
+                    localStorage.setItem('refresh_token', data.refresh_token);  // Si también tienes un refresh_token
+                }
+                
+                alert('Login exitoso');
+                window.location.href = '/chat'; // Redirige a la página de chat
+            } else {
+                throw new Error("Token de acceso no recibido");
+            }
+        })
+        .catch(error => {
+            console.error('Error al conectar con el servidor de autenticación:', error);
+            alert('Error al conectar con el servidor de autenticación');
+        });
+
+        return false;
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+
+
+{% endblock %}

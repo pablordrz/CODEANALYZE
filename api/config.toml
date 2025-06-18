@@ -1,0 +1,4 @@
+SQLALCHEMY_DATABASE_URI = "mariadb+mariadbconnector://usuario:password@mariadb:3306/flask_database"
+# SQLALCHEMY_DATABASE_URI = "mariadb+mariadbconnector://usuario:password@localhost:3306/flask_database"
+SQLALCHEMY_TRACK_MODIFICATIONS = false
+SECRET_KEY = "nAhaMNBaiJcz6H8eWR1oz1xNfFbXMReX"

@@ -1,0 +1,280 @@
+{% block content %}
+<div class="container-fluid fondo px-4 ">
+    <!-- INICIO -->
+    <div class="row d-lg-block d-none ms-4">
+        <div class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="index.html">Inicio</a></li>
+                <li class="breadcrumb-item active">Chat</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="row rounded-3 p-0 d-lg-none d-block mx-mb-2 mb-3 justify-content-center mx-auto" style="max-width: 800px;">
+        <div class="breadcrumb-container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="index.html">Inicio</a></li>
+                <li class="breadcrumb-item active">Chat</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- ALERTA -->
+    <div class="row m-0"> <!-- Fila 2 del Contenedor -->
+        <div class="container-xl m-0" id="alert-container"><div class="alerta">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+              <div class="alert alert-dismissible alert-warning ">
+                <div class="row">
+                    <div class="col-lg-8 col-10 text-start">
+                        <h4 class="alert-heading">Atención!</h4>
+                         {{ message }}
+                    </div>
+                    <div class="col-lg-4 col-2">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+            </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+        </div></div>
+    </div>
+
+    <!-- LISTA DE PROYECTOS Y CHAT-->
+    <div class="row pb-3 align-items-start">
+        <!-- Proyectos  -->
+        <div class="col-lg-3 mx-4 bg-white rounded-3 p-2 d-lg-block d-none">
+            <!-- Botón de Añadir -->
+            <div class="row justify-content-end">
+                <div class="col-lg-3 mx-2 text-end pe-1">
+                    <a href="{{ url_for('anadir') }}">
+                        <button class="btn p-0 mb-2">
+                            <i id="añadir" class="bi bi-plus"></i>
+                        </button>
+                    </a>
+                </div>
+            </div>
+        
+            <!-- Lista de Proyectos -->
+            <div class="mt-2">
+                <div class="col-lg-12">
+                    <div class="list-group" id="proyectos-list">
+                        <!-- Los proyectos serán cargados aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="proyectos-dropdown-mobile" class="d-lg-none d-block bg-white rounded-3 p-2 mb-3 mx-auto shadow-sm border"
+            style="max-width: 1000px;">
+        <!-- Aquí se inyectará el <select> y los botones desde JS -->
+        </div>
+        <!-- Chat -->
+        <div class="col card p-0 me-lg-5 me-auto mx-auto p-1 " style="min-height: 600px; max-width: 800px; max-height: 600px;">
+            <div class="card-body p-4 overflow-auto" id="chat-bot">
+                <div id="mensaje_bot" class="row mb-3">
+                    <div class="col-1 p-0">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="col-11 rounded-3 bg-secondary p-2 d-flex align-items-center m-0 text-white">
+                        <p class="m-2">Hola! Soy un bot, ¿en qué puedo ayudarte? </p>
+                    </div>
+                </div>
+                <div id="mensaje_usuario" class="row my-3">
+                    <div class="col-11 rounded-3 bg-primary p-2 d-flex align-items-center m-0 text-white">
+                        <p class="m-2">Estoy realizando una aplicación web para recoger las vulnerabilidades de mis proyectos. </p>
+                    </div>
+                    <div class="col-1 d-flex justify-content-end p-0">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                </div>
+                <div id="mensaje_bot" class="row mb-3 ">
+                    <div class="col-1 p-0">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="col-11 rounded-3 bg-secondary p-2 d-flex align-items-center m-0 text-white">
+                        <p class="m-2">Antes de continuar, permíteme que te cuente que los cangrejos tienen el cerebro en la garganta. </p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="input-group">
+                    <input id="message-input" type="text" class="form-control" placeholder="Escribe un mensaje">
+                    <button id="send-button" class="btn btn-primary">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const API_BASE_URL = 'http://localhost:5001';
+    
+    function obtenerToken() {
+        return localStorage.getItem('access_token');
+    }
+    
+    function mostrarAlerta(mensaje, tipo) {
+        const alertContainer = document.getElementById("alert-container");
+        const alertDiv = document.createElement("div");
+        alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            <div class="row">
+                <div class="col-lg-8 col-10 text-start">
+                    <h4 class="alert-heading">Atención!</h4>
+                    ${mensaje}
+                </div>
+                <div class="col-lg-4 col-2">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        `;
+        alertContainer.appendChild(alertDiv);
+    }
+    
+    async function eliminarProyecto(id) {
+        if (confirm("¿Estás seguro de que quieres eliminar este proyecto?")) {
+            try {
+                const token = obtenerToken();
+                const response = await fetch(`${API_BASE_URL}/proyectos/${id}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+    
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+                mostrarAlerta("Proyecto eliminado correctamente.", "success");
+                await cargarProyectos();
+            } catch (error) {
+                console.error("Error al eliminar el proyecto:", error);
+                mostrarAlerta("Error al eliminar el proyecto. Por favor, intente nuevamente.", "danger");
+            }
+        }
+    }
+    
+    async function cargarProyectos() {
+        const proyectosList = document.getElementById("proyectos-list");
+        const proyectosDropdown = document.getElementById("proyectos-dropdown-mobile");
+        try {
+            const token = obtenerToken();
+            const response = await fetch(`${API_BASE_URL}/proyectos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+    
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const proyectos = await response.json();
+            const chatSeleccionado = {{ chat_seleccionado|default('null') }};
+    
+            // Desktop
+            if (proyectosList) {
+                proyectosList.innerHTML = '';
+                proyectos.forEach(proyecto => {
+                    const item = document.createElement("div");
+                    item.classList.add("list-group-item", "list-group-item-action", "d-flex", "justify-content-between", "align-items-center", "p-1", "px-3");
+                    if (chatSeleccionado !== null && proyecto.id === chatSeleccionado) item.classList.add("active");
+    
+                    item.innerHTML = `
+                        <a href="/chat/${proyecto.id}" class="flex-grow-1 text-decoration-none ${chatSeleccionado === proyecto.id ? 'text-white' : 'text-black'}">
+                            <span>${proyecto.nombre}</span>
+                        </a>
+                        <div class="edit d-flex align-items-center me-2">
+                            <a href="/proyecto/editar/${proyecto.id}" class="text-decoration-none text-white">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </div>
+                        <div class="papelera d-flex align-items-center">
+                            <button onclick="eliminarProyecto(${proyecto.id})" class="btn btn-link text-decoration-none text-white p-0">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    proyectosList.appendChild(item);
+                });
+            }
+    
+            // Mobile dropdown
+            if (proyectosDropdown) {
+                proyectosDropdown.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <select id="dropdown-proyectos" class="form-select flex-grow-1">
+                            ${proyectos.map(p => `<option value="${p.id}" ${chatSeleccionado === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
+                        </select>
+                        <div class="d-flex align-items-center gap-1">
+                            <a href="/anadir" class="btn btn-outline-primary p-1" title="Añadir">
+                                <i class="bi bi-plus"></i>
+                            </a>
+                            <a id="editar-proyecto-link" href="/proyecto/editar/${chatSeleccionado}" class="btn btn-outline-secondary p-1" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button id="eliminar-proyecto-btn" class="btn btn-outline-danger p-1" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+    
+                // Añadir listeners
+                const select = document.getElementById("dropdown-proyectos");
+                const editarBtn = document.getElementById("editar-proyecto-link");
+                const eliminarBtn = document.getElementById("eliminar-proyecto-btn");
+    
+                select.addEventListener("change", function () {
+                    const selectedId = this.value;
+                    editarBtn.href = `/proyecto/editar/${selectedId}`;
+                    eliminarBtn.onclick = () => eliminarProyecto(selectedId);
+                    window.location.href = `/chat/${selectedId}`;
+                });
+    
+                // Asegurar evento correcto en carga inicial
+                eliminarBtn.onclick = () => eliminarProyecto(select.value);
+            }
+    
+        } catch (error) {
+            console.error("Error al cargar los proyectos:", error);
+            mostrarAlerta("Error al cargar los proyectos. Por favor, intente nuevamente.", "danger");
+        }
+    }
+    
+    document.getElementById('send-button').addEventListener('click', async function () {
+        const messageInput = document.getElementById('message-input');
+        const message = messageInput.value.trim();
+    
+        if (message) {
+            try {
+                const token = obtenerToken();
+                const response = await fetch(`${API_BASE_URL}/chat/mensaje`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        mensaje: message,
+                        proyecto_id: {{ chat_seleccionado|default('null') }}
+                    })
+                });
+    
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+                messageInput.value = '';
+                await cargarProyectos();
+            } catch (error) {
+                console.error("Error al enviar el mensaje:", error);
+                mostrarAlerta("Error al enviar el mensaje. Por favor, intente nuevamente.", "danger");
+            }
+        }
+    });
+    
+    document.addEventListener('DOMContentLoaded', cargarProyectos);
+    </script>
+    
+{% endblock %}
+<script src="{{ url_for('static', filename='scripts.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
