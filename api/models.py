@@ -11,6 +11,9 @@ class Usuario(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     roles = db.Column(db.String(200), nullable=False, default='user')
     is_active = db.Column(db.Boolean, default=True)
+    
+    # Relación con proyectos
+    proyectos = db.relationship('Proyecto', backref='usuario', lazy=True, cascade='all, delete-orphan')
 
     @property
     def identity(self):
@@ -68,6 +71,9 @@ class Proyecto(db.Model):
     descripcion = db.Column(db.Text, nullable=True)
     fecha = db.Column(db.Date, nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    
+    # Relación con SBOMs
+    sbooms = db.relationship('Sboom', backref='proyecto', lazy=True, cascade='all, delete-orphan')
 
 class Sboom(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,7 +81,7 @@ class Sboom(db.Model):
     descripcion = db.Column(db.Text, nullable=True)
     fecha = db.Column(db.Date, nullable=False)
     proyecto_id = db.Column(db.Integer, db.ForeignKey('proyecto.id'), nullable=False)
-    dependencias = db.relationship('Dependencia', backref='sboom', lazy=True)
+    dependencias = db.relationship('Dependencia', backref='sboom', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
         return {

@@ -117,20 +117,70 @@
                 const isActive = proyecto.id === proyectoSeleccionadoId;
                 const item = document.createElement("div");
                 item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${isActive ? 'active' : ''}`;
+                
+                const nombreProyecto = proyecto.nombre;
                 item.innerHTML = `
                     <div class="flex-grow-1">
-                        <strong>${proyecto.nombre}</strong>
+                        <strong>${nombreProyecto}</strong>
                     </div>
                     <div class="btn-group" role="group">
                         <a href="/chat/${proyecto.id}" class="btn btn-sm btn-outline-primary">Acceder</a>
                         <a href="/proyecto/editar/${proyecto.id}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                        <button class="btn btn-sm btn-outline-danger btn-eliminar" data-id="${proyecto.id}" data-nombre="${nombreProyecto}">Borrar</button>
                     </div>
                 `;
                 proyectosList.appendChild(item);
             });
+            
+            // Agregar event listeners para los botones de eliminar
+            document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const nombre = this.getAttribute('data-nombre');
+                    eliminarProyecto(id, nombre);
+                });
+            });
         } catch (error) {
             console.error("Error al cargar los proyectos:", error);
             mostrarAlerta("No se pudieron cargar tus proyectos. Por favor, recarga la página.");
+        }
+    }
+
+    // FUNCIÓN PARA ELIMINAR PROYECTO
+    async function eliminarProyecto(proyectoId, nombreProyecto) {
+        if (!confirm(`¿Estás seguro de que quieres eliminar el proyecto "${nombreProyecto}"? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            const token = obtenerToken();
+            const response = await fetch(`${API_BASE_URL}/proyectos/${proyectoId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Error HTTP: ${response.status}`);
+            }
+
+            const result = await response.json();
+            mostrarAlerta(result.message, 'success');
+            
+            // Recargar la lista de proyectos
+            cargarProyectos();
+            
+            // Si el proyecto eliminado era el seleccionado, limpiar la tabla de dependencias
+            if (proyectoId == proyectoSeleccionadoId) {
+                const dependenciasBody = document.getElementById("dependencias-body");
+                dependenciasBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Seleccione un proyecto para ver sus dependencias.</td></tr>`;
+                document.getElementById('informe-pdf-btn').disabled = true;
+                document.getElementById('sbom-btn').disabled = true;
+            }
+            
+        } catch (error) {
+            console.error("Error al eliminar el proyecto:", error);
+            mostrarAlerta(`Error al eliminar el proyecto: ${error.message}`, 'danger');
         }
     }
 

@@ -224,10 +224,31 @@ class ProyectoResource(Resource):
                 user_role = user.roles
         elif hasattr(user, 'rolenames'):
             user_role = user.rolenames[0] if user.rolenames else None
-        p = Proyecto.query.get_or_404(id)
-        if user_role != 'admin' and p.usuario_id != user.id:
-            return {"error": "No autorizado"}, 403
-        db.session.delete(p)
-        db.session.commit()
-        return {"message": "Proyecto eliminado"}
+        
+        try:
+            p = Proyecto.query.get_or_404(id)
+            if user_role != 'admin' and p.usuario_id != user.id:
+                return {"error": "No autorizado"}, 403
+            
+            # Obtener información del proyecto antes de borrarlo
+            proyecto_info = {
+                "id": p.id,
+                "nombre": p.nombre,
+                "usuario_id": p.usuario_id
+            }
+            
+            # El borrado en cascada se maneja automáticamente por SQLAlchemy
+            # debido a las relaciones configuradas en los modelos
+            db.session.delete(p)
+            db.session.commit()
+            
+            return {
+                "message": f"Proyecto '{proyecto_info['nombre']}' eliminado exitosamente",
+                "proyecto_eliminado": proyecto_info
+            }, 200
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error al eliminar proyecto {id}: {str(e)}")
+            return {"error": "Error interno al eliminar el proyecto"}, 500
     
