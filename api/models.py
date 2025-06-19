@@ -82,7 +82,7 @@ class Sboom(db.Model):
             'id': self.id,
             'nombre': self.nombre,
             'descripcion': self.descripcion,
-            'fecha': self.fecha,
+            'fecha': self.fecha.isoformat(),
             'proyecto_id': self.proyecto_id,
             'dependencias': [d.to_dict() for d in self.dependencias]
         }

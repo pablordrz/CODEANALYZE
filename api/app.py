@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 import toml
@@ -50,82 +51,51 @@ class AuthResource(Resource):
         # Endpoint para verificar el token actual
         return jsonify({'message': 'Token válido'}) # Devuelve un mensaje JSON
 
+from deepseek_dependency_extractor import DeepSeekDependencyExtractor
+import asyncio
+
 class ProyectoUploadResource(Resource):
     @auth_required
     def post(self, proyecto_id):
         """
         Endpoint para subir un .zip a un proyecto específico, extraer sus
-        dependencias y guardarlas en la base de datos actual.
+        dependencias con IA y guardarlas en la base de datos.
         """
-        from models import Proyecto, Sboom, Dependencia  # Importar modelos necesarios
-
         user = current_user()
-        # 1. Verificar que el proyecto existe y pertenece al usuario autenticado
+
+        # 1. Verificar proyecto
         proyecto = Proyecto.query.filter_by(id=proyecto_id, usuario_id=user.id).first()
         if not proyecto:
             return {'error': 'Proyecto no encontrado o no tienes permiso para acceder a él'}, 404
 
-        
-        # 2. Validar el archivo
+        # 2. Validar archivo
         if 'file' not in request.files or request.files['file'].filename == '':
             return {'error': 'No se seleccionó ningún archivo'}, 400
-        
+
         file = request.files['file']
         if not file.filename.endswith('.zip'):
             return {'error': 'El archivo debe tener la extensión .zip'}, 400
 
-        # 3. Procesar el archivo en un directorio temporal
+        # 3. Procesar el ZIP
         with tempfile.TemporaryDirectory() as temp_dir:
             try:
                 zip_path = os.path.join(temp_dir, secure_filename(file.filename))
                 file.save(zip_path)
-                
-                
 
                 extract_path = os.path.join(temp_dir, 'extracted')
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     zip_ref.extractall(extract_path)
 
-                # 4. Recorrer archivos y buscar dependencias
-                all_dependencies = []
-                for root, _, files in os.walk(extract_path):
-                    for filename in files:
-                        try:
-                            ruta_archivo = os.path.join(root, filename)
-                            with open(ruta_archivo, 'r', encoding='utf-8', errors='ignore') as f:
-                                contenido = f.read()
-                            # Detectar el lenguaje por la extensión del archivo
-                            if filename.endswith('.py'):
-                                # Buscar importaciones en archivos Python
-                                for linea in contenido.splitlines():
-                                    match = re.match(r'^\s*(import|from)\s+([a-zA-Z0-9_\.]+)', linea)
-                                    if match:
-                                        modulo = match.group(2).split('.')[0]
-                                        if modulo not in all_dependencies:
-                                            all_dependencies.append(modulo)
-                            elif filename.endswith('.js'):
-                                # Buscar require o import en archivos JavaScript
-                                for linea in contenido.splitlines():
-                                    match = re.search(r"(?:require\(['\"]([a-zA-Z0-9_\-\/]+)['\"]\))|(?:import\s+.*?['\"]([a-zA-Z0-9_\-\/]+)['\"])", linea)
-                                    if match:
-                                        modulo = match.group(1) or match.group(2)
-                                        if modulo and modulo not in all_dependencies:
-                                            all_dependencies.append(modulo)
-                            elif filename.endswith('.java'):
-                                # Buscar importaciones en archivos Java
-                                for linea in contenido.splitlines():
-                                    match = re.match(r'^\s*import\s+([a-zA-Z0-9_\.]+);', linea)
-                                    if match:
-                                        paquete = match.group(1).split('.')[0]
-                                        if paquete not in all_dependencies:
-                                            all_dependencies.append(paquete)
-                        except Exception:
-                            continue # Ignorar archivos no legibles
-                
-                
-                # 5. Guardar dependencias en la base de datos en la tabla Sboom y Dependencia
-                unique_dependencies = sorted(list(set(all_dependencies)))
-                # Crear Sboom asociado al proyecto
+                # 4. Usar IA para extraer dependencias
+                extractor = DeepSeekDependencyExtractor(api_token='cpk_145e465d6215459198b9895a7ffbf7b0.628389086c76508faebba4f6b0d1a90e.Aj37vjvBkJ3Dv79uyZe0BNCJcjR4F115')
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                dependencias_extraidas = loop.run_until_complete(
+                    extractor.extract_dependencies_from_directory(extract_path)
+                )
+
+                # 5. Guardar resultados
                 sboom = Sboom(
                     nombre=f"SBOM de proyecto {proyecto.nombre}",
                     descripcion=f"SBOM generado automáticamente para el proyecto {proyecto.nombre}",
@@ -133,21 +103,15 @@ class ProyectoUploadResource(Resource):
                     proyecto_id=proyecto.id
                 )
                 db.session.add(sboom)
-                db.session.commit()  # Para obtener el id del sboom
-                
-                
+                db.session.commit()
 
-                # Crear Dependencia para cada dependencia extraída
-                for dep in unique_dependencies:
-                    # Si la dependencia tiene versión (por ejemplo, en requirements.txt: nombre==version)
-                    if '==' in dep:
-                        nombre, version = dep.split('==', 1)
-                    elif ':' in dep:  # Para Maven
-                        nombre, version = dep, None
-                    else:
-                        nombre, version = dep, None
-                    dependencia = Dependencia(nombre=nombre, version=version, sboom_id=sboom.id)
-                    db.session.add(dependencia)
+                for dep in dependencias_extraidas:
+                    nombre = dep.get("name")
+                    version = dep.get("version")
+                    if nombre:
+                        dependencia = Dependencia(nombre=nombre, version=version, sboom_id=sboom.id)
+                        db.session.add(dependencia)
+
                 db.session.commit()
 
                 return {
@@ -159,7 +123,6 @@ class ProyectoUploadResource(Resource):
                 return {'error': 'El archivo proporcionado no es un ZIP válido.'}, 400
             except Exception as e:
                 return {'error': f'Ocurrió un error interno durante el procesamiento: {str(e)}'}, 500
-
 class ProyectoDependenciasResource(Resource):
     @auth_required
     def get(self, proyecto_id):

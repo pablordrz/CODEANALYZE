@@ -13,7 +13,7 @@ services:
     depends_on:
       - api
       - chat
-    command: /bin/sh -c "pip install flask_praetorian requests && flask run --host=0.0.0.0 --port=5000 --debug"
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
 
   chat:
     platform: linux/amd64
@@ -27,7 +27,7 @@ services:
       FLASK_ENV: development
     depends_on:
       - api
-    command: /bin/sh -c "pip install flask_praetorian requests && flask run --host=0.0.0.0 --port=5000 --debug"
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
 
   api:
     platform: linux/amd64
@@ -46,7 +46,7 @@ services:
       DB_PASSWORD: password
     depends_on:
       - mariadb
-    command: /bin/sh -c "pip install flask_praetorian && flask run --host=0.0.0.0 --port=5000 --debug"
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
 
   mariadb:
     platform: linux/amd64
