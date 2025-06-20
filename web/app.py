@@ -213,3 +213,7 @@ def buscar():
     q = request.args.get('q')
     return render_template("layout.html", footer='footer.html', content='buscar.html', nav='nav.html', q=q)
 
+@app.route("/proyecto/<int:proyecto_id>/versiones", methods=["GET"])
+def dependencias_version(proyecto_id):
+    return render_template("layout.html", footer='footer.html', content='dependencias_version.html', nav='nav.html', proyecto_id=proyecto_id)
+

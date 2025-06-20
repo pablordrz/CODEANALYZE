@@ -113,7 +113,7 @@
 
         mostrarMensaje("Proyecto creado y archivo subido con éxito.", 'success');
         setTimeout(() => {
-          window.location.href = `/chat/${nuevoProyectoId}`;
+          window.location.href = `/proyecto/${nuevoProyectoId}/versiones`;
         }, 1500);
 
       } catch (error) {

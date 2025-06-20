@@ -13,6 +13,7 @@
     {% include nav %}
     {% include content %}
     {% include footer %}
+    {% block scripts %}{% endblock %}
   </body>
   <script>
     // Elimina los tokens si la URL contiene 'logout' o si se muestra el mensaje de sesión cerrada

@@ -135,9 +135,30 @@ class ProyectoUploadResource(Resource):
 class ProyectoDependenciasResource(Resource):
     @auth_required
     def get(self, proyecto_id):
+        user = current_user()
+        
+        # Verificar si el usuario es admin
+        user_role = None
+        if hasattr(user, 'roles'):
+            if isinstance(user.roles, str):
+                user_role = user.roles.split(',')[0]
+            else:
+                user_role = user.roles
+        elif hasattr(user, 'rolenames'):
+            user_role = user.rolenames[0] if user.rolenames else None
+        
+        # Buscar el proyecto
+        proyecto = Proyecto.query.get_or_404(proyecto_id)
+        
+        # Verificar permisos: solo el propietario o admin puede ver las dependencias
+        if user_role != 'admin' and proyecto.usuario_id != user.id:
+            return {'error': 'No tienes permisos para ver las dependencias de este proyecto'}, 403
+        
+        # Buscar el SBOM del proyecto
         sboom = Sboom.query.filter_by(proyecto_id=proyecto_id).order_by(Sboom.id.desc()).first()
         if not sboom:
             return {'error': 'No se encontró SBOM para este proyecto'}, 404
+        
         dependencias = [d.to_dict() for d in sboom.dependencias]
         return {'proyecto_id': proyecto_id, 'sboom_id': sboom.id, 'dependencias': dependencias}, 200
 
