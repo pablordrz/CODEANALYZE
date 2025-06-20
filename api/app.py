@@ -2,7 +2,7 @@
 from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 import toml
-from models import db, Usuario, Proyecto, Sboom, Dependencia
+from models import db, Usuario, Proyecto, Sboom, Dependencia, Vulnerabilidad
 from resources import UsuarioListResource, UsuarioResource, ProyectoListResource, ProyectoResource
 from flask_cors import CORS
 from flask_praetorian import Praetorian, auth_required, current_user
@@ -17,6 +17,7 @@ import re
 from filtrado import StaticDependencyAnalyzer # Importamos la nueva clase
 from deepseek_dependency_extractor import DeepSeekDependencyExtractor
 import asyncio
+from vulnerability_scanner import buscar_vulnerabilidades 
 
 app = Flask(__name__)
 app.config.from_file("./config.toml", load=toml.load)
@@ -140,6 +141,32 @@ class ProyectoDependenciasResource(Resource):
         dependencias = [d.to_dict() for d in sboom.dependencias]
         return {'proyecto_id': proyecto_id, 'sboom_id': sboom.id, 'dependencias': dependencias}, 200
 
+class VulnerabilityScanResource(Resource):
+    @auth_required
+    def post(self, sboom_id):
+        sboom = Sboom.query.get_or_404(sboom_id)
+        if sboom.proyecto.usuario_id != current_user().id:
+            return {'error': 'No tienes permiso para analizar este SBOM'}, 403
+
+        nvd_api_key = app.config.get('NVD_API_KEY')
+        nuevas_vulnerabilidades_count = 0
+
+        for dep in sboom.dependencias:
+            vulnerabilidades_halladas = buscar_vulnerabilidades(dep.nombre, dep.version, nvd_api_key)
+            
+            for vuln_data in vulnerabilidades_halladas:
+                existe = Vulnerabilidad.query.filter_by(cve_id=vuln_data['cve_id'], dependencia_id=dep.id).first()
+                if not existe:
+                    nueva_vuln = Vulnerabilidad(dependencia_id=dep.id, **vuln_data)
+                    db.session.add(nueva_vuln)
+                    nuevas_vulnerabilidades_count += 1
+        
+        db.session.commit()
+        return {
+            'message': 'Análisis de vulnerabilidades completado.',
+            'nuevas_vulnerabilidades_encontradas': nuevas_vulnerabilidades_count
+        }, 200
+
 class ProyectoDependenciaUpdateResource(Resource):
     @auth_required
     def put(self, proyecto_id, dependencia_id):
@@ -175,6 +202,7 @@ api.add_resource(UsuarioResource, "/usuarios/<int:id>")
 api.add_resource(ProyectoListResource, "/proyectos")
 api.add_resource(ProyectoResource, "/proyectos/<int:id>")
 api.add_resource(ProyectoUploadResource, "/proyectos/<int:proyecto_id>/upload")
+api.add_resource(VulnerabilityScanResource, "/api/sboom/<int:sboom_id>/scan")
 api.add_resource(ProyectoDependenciasResource, "/proyectos/<int:proyecto_id>/dependencias")
 api.add_resource(ProyectoDependenciaUpdateResource, "/proyectos/<int:proyecto_id>/dependencias/<int:dependencia_id>")
 

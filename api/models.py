@@ -98,12 +98,54 @@ class Dependencia(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     version = db.Column(db.String(50), nullable=True)
     sboom_id = db.Column(db.Integer, db.ForeignKey('sboom.id'), nullable=False)
+    vulnerabilidades = db.relationship('Vulnerabilidad', backref='dependencia', lazy=True, cascade="all, delete-orphan")
+
+    def to_dict(self):
+        """
+        Serializa el objeto Dependencia a un diccionario, incluyendo sus vulnerabilidades.
+        Esta es la función clave para que el frontend pueda mostrar los datos.
+        """
+        # Determina la vulnerabilidad y el nivel de riesgo para la tabla
+        vulnerabilidad_display = "N/A"
+        riesgo_display = "N/A"
+        if self.vulnerabilidades:
+            num_vulns = len(self.vulnerabilidades)
+            vulnerabilidad_display = f"{num_vulns} encontrada{'s' if num_vulns > 1 else ''}"
+            
+            # Calcula el nivel de riesgo más alto
+            severidades = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+            max_riesgo_num = 0
+            for v in self.vulnerabilidades:
+                riesgo_num = severidades.get(v.severidad, 0)
+                if riesgo_num > max_riesgo_num:
+                    max_riesgo_num = riesgo_num
+                    riesgo_display = v.severidad
+
+        return {
+            'id': self.id,
+            'nombre': self.nombre,
+            'version': self.version or "No especificada",
+            'sboom_id': self.sboom_id,
+            'vulnerabilidad_display': vulnerabilidad_display, # Columna "Vulnerabilidad"
+            'nivel_riesgo_display': riesgo_display,       # Columna "Nivel de Riesgo"
+            'vulnerabilidades': [v.to_dict() for v in self.vulnerabilidades] # Lista detallada
+        }
+
+class Vulnerabilidad(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cve_id = db.Column(db.String(50), nullable=False)
+    descripcion = db.Column(db.Text, nullable=False)
+    puntuacion_cvss = db.Column(db.Float, nullable=True)
+    severidad = db.Column(db.String(50), nullable=True)
+    dependencia_id = db.Column(db.Integer, db.ForeignKey('dependencia.id'), nullable=False)
+    
+    __table_args__ = (db.UniqueConstraint('cve_id', 'dependencia_id', name='_cve_dependencia_uc'),)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'nombre': self.nombre,
-            'version': self.version,
-            'sboom_id': self.sboom_id
+            'cve_id': self.cve_id,
+            'descripcion': self.descripcion,
+            'puntuacion_cvss': self.puntuacion_cvss,
+            'severidad': self.severidad
         }
-
