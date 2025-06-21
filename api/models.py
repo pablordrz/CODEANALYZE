@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from passlib.hash import bcrypt
 
 db = SQLAlchemy()
 
@@ -32,10 +32,10 @@ class Usuario(db.Model):
 
     @password.setter
     def password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = bcrypt.hash(password)
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        return bcrypt.verify(password, self.password_hash)
 
     @classmethod
     def lookup(cls, username):

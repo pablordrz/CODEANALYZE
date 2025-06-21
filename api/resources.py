@@ -271,4 +271,44 @@ class ProyectoResource(Resource):
             db.session.rollback()
             print(f"Error al eliminar proyecto {id}: {str(e)}")
             return {"error": "Error interno al eliminar el proyecto"}, 500
+
+class RegistroPublicoResource(Resource):
+    def post(self):
+        data = request.get_json()
+        if not data:
+            return {"error": "No se recibió JSON válido."}, 400
+
+        nombre = data.get("nombre")
+        email = data.get("email")
+        username = data.get("username")
+        password = data.get("password")
+
+        # Verificar campos obligatorios
+        if not all([nombre, email, username, password]):
+            return {"error": "Faltan campos obligatorios."}, 400
+
+        # Verificar unicidad de username y email
+        if Usuario.query.filter_by(username=username).first():
+            return {"error": "El nombre de usuario ya está en uso."}, 400
+        if Usuario.query.filter_by(email=email).first():
+            return {"error": "El correo electrónico ya está registrado."}, 400
+
+        # Crear el nuevo usuario (siempre como 'user', no admin)
+        nuevo_usuario = Usuario(
+            nombre=nombre,
+            email=email,
+            username=username,
+            roles='user'  # Los usuarios que se registran públicamente siempre son 'user'
+        )
+        nuevo_usuario.password = password  # Setter hash automático
+
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+
+        logger.info(f"Se registró un nuevo usuario públicamente: {nuevo_usuario.username}")
+
+        return {
+            "message": "Usuario registrado exitosamente.",
+            "usuario": nuevo_usuario.to_dict()
+        }, 201
     

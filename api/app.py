@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 import toml
 from models import db, Usuario, Proyecto, Sboom, Dependencia, Vulnerabilidad
-from resources import UsuarioListResource, UsuarioResource, ProyectoListResource, ProyectoResource
+from resources import UsuarioListResource, UsuarioResource, ProyectoListResource, ProyectoResource, RegistroPublicoResource
 from flask_cors import CORS
 from flask_praetorian import Praetorian, auth_required, current_user
 from datetime import timedelta, date
@@ -231,6 +231,7 @@ api.add_resource(ProyectoUploadResource, "/proyectos/<int:proyecto_id>/upload")
 api.add_resource(VulnerabilityScanResource, "/api/sboom/<int:sboom_id>/scan")
 api.add_resource(ProyectoDependenciasResource, "/proyectos/<int:proyecto_id>/dependencias")
 api.add_resource(ProyectoDependenciaUpdateResource, "/proyectos/<int:proyecto_id>/dependencias/<int:dependencia_id>")
+api.add_resource(RegistroPublicoResource, "/registro")
 
 
 if __name__ == "__main__":

@@ -119,6 +119,10 @@ def login():
     # Si es GET, mostrar la página de login
     return render_template("layout.html", content="login.html", footer='footer.html', nav='nav.html')
 
+@app.route('/registro', methods=['GET'])
+def registro():
+    return render_template("layout.html", content="registro.html", footer='footer.html', nav='nav.html')
+
 @app.route("/logout")
 def logout():
     # Limpiar la sesión
