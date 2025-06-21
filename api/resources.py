@@ -103,8 +103,9 @@ class UsuarioResource(Resource):
         u.username = args["username"]
         u.roles = 'admin' if args["is_admin"] else 'user'
         if args["password"]:
-            u.set_password(args["password"])
+            u.password = args["password"]
         db.session.commit()
+        logger.info(f"Usuario '{current_user().username}' actualizó al usuario: {u.username}")
         return {"message": "Usuario actualizado"}
 
     @roles_required('admin')

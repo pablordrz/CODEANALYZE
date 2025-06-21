@@ -67,8 +67,13 @@
       return res.json();
     })
     .then(data => {
-      alert("Usuario creado exitosamente.");
-      document.getElementById("usuario-nuevo-form").reset();
+      document.getElementById("mensaje").innerHTML = `
+        <div class="alert alert-success">Usuario creado exitosamente. Redirigiendo a la gestión de usuarios...</div>`;
+      
+      // Redirigir a la página de gestión de usuarios después de 2 segundos
+      setTimeout(() => {
+        window.location.href = '/usuarios';
+      }, 2000);
     })
     .catch(err => {
       console.error("Error al crear usuario:", err);

@@ -63,7 +63,12 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .then(data => {
       document.getElementById("mensaje").innerHTML = `
-        <div class="alert alert-success">Usuario actualizado correctamente.</div>`;
+        <div class="alert alert-success">Usuario actualizado correctamente. Redirigiendo a la gestión de usuarios...</div>`;
+      
+      // Redirigir a la página de gestión de usuarios después de 2 segundos
+      setTimeout(() => {
+        window.location.href = '/usuarios';
+      }, 2000);
     })
     .catch(err => {
       document.getElementById("mensaje").innerHTML = `
