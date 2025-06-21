@@ -3,6 +3,7 @@ from flask import request
 from models import db, Usuario, Proyecto
 from datetime import datetime
 from flask_praetorian import auth_required, roles_required, roles_accepted, current_user
+from logger_config import logger
 
 usuario_parser = reqparse.RequestParser()
 usuario_parser.add_argument("nombre", type=str, required=True)
@@ -64,6 +65,8 @@ class UsuarioListResource(Resource):
         db.session.add(nuevo_usuario)
         db.session.commit()
 
+        logger.info(f"Usuario '{current_user().username}' creó un nuevo usuario: {nuevo_usuario.username}")
+
         return {
             "message": "Usuario creado exitosamente.",
             "usuario": nuevo_usuario.to_dict()
@@ -109,6 +112,7 @@ class UsuarioResource(Resource):
         u = Usuario.query.get_or_404(id)
         db.session.delete(u)
         db.session.commit()
+        logger.info(f"Usuario '{current_user().username}' eliminó al usuario: {u.username}")
         return {"message": "Usuario eliminado"}
 
 class ProyectoListResource(Resource):
@@ -167,6 +171,8 @@ class ProyectoListResource(Resource):
         db.session.add(nuevo_proyecto)
         db.session.commit()
 
+        logger.info(f"Usuario '{current_user().username}' creó un nuevo proyecto: {nuevo_proyecto.nombre}")
+
         return {
             "id": nuevo_proyecto.id,
             "nombre": nuevo_proyecto.nombre,
@@ -220,6 +226,7 @@ class ProyectoResource(Resource):
         p.max_vulnerabilidades_permitidas = args.get("max_vulnerabilidades_permitidas")
         p.nivel_criticidad_maximo = args.get("nivel_criticidad_maximo")
         db.session.commit()
+        logger.info(f"Usuario '{current_user().username}' actualizó el proyecto: {p.nombre}")
         return {"message": "Proyecto actualizado"}
 
     @auth_required
@@ -252,6 +259,8 @@ class ProyectoResource(Resource):
             db.session.delete(p)
             db.session.commit()
             
+            logger.info(f"Usuario '{current_user().username}' eliminó el proyecto: {proyecto_info['nombre']}")
+
             return {
                 "message": f"Proyecto '{proyecto_info['nombre']}' eliminado exitosamente",
                 "proyecto_eliminado": proyecto_info

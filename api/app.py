@@ -12,6 +12,7 @@ import zipfile
 import tempfile
 from werkzeug.utils import secure_filename
 import re
+from logger_config import logger
 
 # --- Nuevas importaciones ---
 from filtrado import StaticDependencyAnalyzer # Importamos la nueva clase
@@ -39,6 +40,7 @@ class AuthResource(Resource):
         username = data.get('username')
         password = data.get('password')
         user = guard.authenticate(username, password)
+        logger.info(f"Usuario '{username}' ha iniciado sesión exitosamente.")
         access_token = guard.encode_jwt_token(user)
         refresh_token = guard.encode_jwt_token(user, is_refresh_token=True)
         return {'access_token': access_token, 'refresh_token': refresh_token}, 200
@@ -66,6 +68,7 @@ class ProyectoUploadResource(Resource):
             try:
                 zip_path = os.path.join(temp_dir, secure_filename(file.filename))
                 file.save(zip_path)
+                logger.info(f"Usuario '{user.username}' ha subido el archivo '{file.filename}' para el proyecto ID: {proyecto_id}.")
 
                 extract_path = os.path.join(temp_dir, 'extracted')
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -203,6 +206,7 @@ class ProyectoDependenciaUpdateResource(Resource):
             return {'error': 'No se encontró la dependencia para este proyecto'}, 404
         dependencia.version = nueva_version
         db.session.commit()
+        logger.info(f"Usuario '{current_user().username}' actualizó la versión de la dependencia ID: {dependencia_id} a '{nueva_version}' en el proyecto ID: {proyecto_id}.")
         return {'message': 'Versión actualizada', 'dependencia': dependencia.to_dict()}, 200
 
 @app.route("/login", methods=["POST"])
@@ -212,6 +216,7 @@ def login():
     password = req.get("password", None)
     user = guard.authenticate(username, password)
     if user:
+        logger.info(f"Usuario '{username}' ha iniciado sesión exitosamente (ruta /login).")
         ret = {"access_token": guard.encode_jwt_token(user)}
         return jsonify(ret), 200
     else:
