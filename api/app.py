@@ -18,7 +18,8 @@ from logger_config import logger
 from filtrado import StaticDependencyAnalyzer # Importamos la nueva clase
 from deepseek_dependency_extractor import DeepSeekDependencyExtractor
 import asyncio
-from vulnerability_scanner import buscar_vulnerabilidades 
+from gemini import GeminiDependencyAnalyzer
+from vulnerability_scanner import BuscadorCVE
 
 app = Flask(__name__)
 app.config.from_file("./config.toml", load=toml.load)
@@ -68,73 +69,69 @@ class ProyectoUploadResource(Resource):
             try:
                 zip_path = os.path.join(temp_dir, secure_filename(file.filename))
                 file.save(zip_path)
-                logger.info(f"Usuario '{user.username}' ha subido el archivo '{file.filename}' para el proyecto ID: {proyecto_id}.")
 
                 extract_path = os.path.join(temp_dir, 'extracted')
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     zip_ref.extractall(extract_path)
 
-                # --- LÓGICA HÍBRIDA DE EXTRACCIÓN ---
+                # --- LÓGICA DE EXTRACCIÓN TOTALMENTE NUEVA CON GEMINI ---
                 
-                # 1. Análisis Estático Rápido
-                static_analyzer = StaticDependencyAnalyzer()
-                static_deps, unhandled_files = static_analyzer.analizar_dependencias(extract_path)
+                print("--- Iniciando análisis de dependencias con Gemini ---")
                 
-                dependencias_extraidas = static_deps
+                api_key = "AIzaSyBj7roIzkzsuRvbmCgZcV3Os6mMa5kceSc"
+                if not api_key:
+                    raise ValueError("La variable de entorno GEMINI_API_KEY no está configurada.")
                 
-                # 2. Análisis con IA como Fallback si hay archivos no reconocidos
-                if unhandled_files:
-                    print(f"Análisis estático no pudo procesar: {unhandled_files}. Usando IA como fallback.")
-                    
-                    # Usamos la IA para un análisis más profundo de todo el proyecto
-                    extractor_ia = DeepSeekDependencyExtractor(api_token='cpk_145e465d6215459198b9895a7ffbf7b0.628389086c76508faebba4f6b0d1a90e.Aj37vjvBkJ3Dv79uyZe0BNCJcjR4F115')
-                    
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    ai_deps = loop.run_until_complete(
-                        extractor_ia.extract_dependencies_from_directory(extract_path)
-                    )
-                    
-                    # 3. Combinar resultados (evitando duplicados)
-                    existing_names = {dep['name'] for dep in dependencias_extraidas}
-                    for dep in ai_deps:
-                        if dep.get('name') and dep['name'] not in existing_names:
-                            dependencias_extraidas.append(dep)
-                            existing_names.add(dep['name'])
+                # 1. Analizar todo el proyecto extraído
+                analyzer = GeminiDependencyAnalyzer(api_key=api_key)
+                final_dependencies = asyncio.run(analyzer.analyze_project(extract_path))
 
-                # 4. Guardar resultados en la Base de Datos
+                # 2. Limpiar SBOMs anteriores y guardar los nuevos resultados
+                print("--- Guardando resultados en la Base de Datos ---")
+                
+                sbooms_antiguos = Sboom.query.filter_by(proyecto_id=proyecto.id).all()
+                for sboom_viejo in sbooms_antiguos:
+                    db.session.delete(sboom_viejo)
+                db.session.commit()
+
                 sboom = Sboom(
-                    nombre=f"SBOM de proyecto {proyecto.nombre}",
-                    descripcion=f"SBOM generado para el proyecto {proyecto.nombre}",
+                    nombre=f"{proyecto.nombre}",
+                    descripcion=f"{proyecto.nombre}",
                     fecha=date.today(),
                     proyecto_id=proyecto.id
                 )
                 db.session.add(sboom)
-                db.session.commit()
+                db.session.flush()
 
-                for dep in dependencias_extraidas:
+                for dep in final_dependencies:
                     nombre = dep.get("name")
-                    version = dep.get("version") # Será None para las estáticas
                     if nombre:
-                        dependencia = Dependencia(nombre=nombre, version=version, sboom_id=sboom.id)
+                        dependencia = Dependencia(
+                            nombre=nombre,
+                            version=dep.get("version"),
+                            sboom_id=sboom.id
+                        )
                         db.session.add(dependencia)
 
                 db.session.commit()
 
                 return {
-                    'message': f'Dependencias actualizadas para el proyecto "{proyecto.nombre}"',
-                    'sboom': sboom.to_dict()
+                    'message': f'Análisis con Gemini completado. Dependencias actualizadas para "{proyecto.nombre}"',
+                    'sboom': sboom.to_dict(),
+                    'dependencias_encontradas': len(final_dependencies)
                 }, 200
 
             except zipfile.BadZipFile:
                 return {'error': 'El archivo proporcionado no es un ZIP válido.'}, 400
             except Exception as e:
-                # Proporcionar un mensaje de error más informativo en modo debug
                 error_msg = f'Ocurrió un error interno: {str(e)}'
-                print(error_msg) # Log del error en el servidor
+                print(error_msg)
+                import traceback
+                traceback.print_exc()
+                db.session.rollback()
                 return {'error': error_msg}, 500
+  
 
-# ... (El resto de tus clases y rutas permanecen igual)
 class ProyectoDependenciasResource(Resource):
     @auth_required
     def get(self, proyecto_id):
@@ -168,28 +165,165 @@ class ProyectoDependenciasResource(Resource):
 class VulnerabilityScanResource(Resource):
     @auth_required
     def post(self, sboom_id):
-        sboom = Sboom.query.get_or_404(sboom_id)
-        if sboom.proyecto.usuario_id != current_user().id:
-            return {'error': 'No tienes permiso para analizar este SBOM'}, 403
-
-        nvd_api_key = app.config.get('NVD_API_KEY')
-        nuevas_vulnerabilidades_count = 0
-
-        for dep in sboom.dependencias:
-            vulnerabilidades_halladas = buscar_vulnerabilidades(dep.nombre, dep.version, nvd_api_key)
+        """
+        Realiza un análisis de vulnerabilidades para todas las dependencias de un SBOM.
+        """
+        from models import db, Sboom, Vulnerabilidad
+        
+        try:
+            # Obtener el SBOM
+            sboom = Sboom.query.get_or_404(sboom_id)
             
+            # Verificar permisos
+            if sboom.proyecto.usuario_id != current_user().id:
+                return {'error': 'No tienes permiso para analizar este SBOM'}, 403
+            
+            # Obtener la API key de NVD
+            nvd_api_key = app.config.get('NVD_API_KEY')
+            
+            # Inicializar buscador
+            buscador = BuscadorCVE(nvd_api_key=nvd_api_key)
+            
+            nuevas_vulnerabilidades_count = 0
+            dependencias_procesadas = 0
+            errores = []
+            
+            
+            # Procesar cada dependencia del SBOM
+            for dep in sboom.dependencias:
+                dependencias_procesadas += 1
+                
+                try:
+                    
+                    # Buscar vulnerabilidades para esta dependencia
+                    vulnerabilidades_halladas = buscador.buscar_vulnerabilidades_para_dependencia(
+                        dep.nombre, dep.version
+                    )
+                    
+                    # Guardar vulnerabilidades en la base de datos
+                    for vuln_data in vulnerabilidades_halladas:
+                        # Verificar si ya existe esta vulnerabilidad para esta dependencia
+                        existe = Vulnerabilidad.query.filter_by(
+                            cve_id=vuln_data['cve_id'], 
+                            dependencia_id=dep.id
+                        ).first()
+                        
+                        if not existe:
+                            # Crear nueva vulnerabilidad
+                            nueva_vuln = Vulnerabilidad(
+                                dependencia_id=dep.id,
+                                cve_id=vuln_data['cve_id'],
+                                descripcion=vuln_data['descripcion'],
+                                puntuacion_cvss=vuln_data['puntuacion_cvss'],
+                                severidad=vuln_data['severidad']
+                            )
+                            db.session.add(nueva_vuln)
+                            nuevas_vulnerabilidades_count += 1
+                            
+                            
+                    
+                except Exception as e:
+                    error_msg = f"Error procesando dependencia {dep.nombre}: {str(e)}"
+                    errores.append(error_msg)
+                    continue
+            
+            # Confirmar cambios en la base de datos
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                return {
+                    'error': 'Error guardando vulnerabilidades en la base de datos',
+                    'details': str(e)
+                }, 500
+            
+            # Preparar respuesta
+            respuesta = {
+                'message': 'Análisis de vulnerabilidades completado para todas las dependencias.',
+                'sboom_id': sboom_id,
+                'sboom_nombre': sboom.nombre,
+                'nuevas_vulnerabilidades_encontradas': nuevas_vulnerabilidades_count,
+                'dependencias_procesadas': dependencias_procesadas,
+                'total_dependencias': len(sboom.dependencias)
+            }
+            
+            if errores:
+                respuesta['errores'] = errores
+                respuesta['warning'] = f'Se encontraron {len(errores)} errores durante el procesamiento'
+            
+            return respuesta, 200
+            
+        except Exception as e:
+            return {
+                'error': 'Error interno durante el análisis de vulnerabilidades',
+                'details': str(e)
+            }, 500
+
+
+class VulnerabilityScanSingleResource(Resource):
+    @auth_required
+    def post(self, dependencia_id):
+        """
+        Realiza un análisis de vulnerabilidades para una dependencia específica.
+        """
+        from models import db, Dependencia, Vulnerabilidad
+        
+        try:
+            # Obtener la dependencia
+            dependencia = Dependencia.query.get_or_404(dependencia_id)
+            
+            # Verificar permisos
+            if dependencia.sboom.proyecto.usuario_id != current_user().id:
+                return {'error': 'No tienes permiso para analizar esta dependencia'}, 403
+            
+            # Obtener la API key de NVD
+            nvd_api_key = app.config.get('NVD_API_KEY')
+            
+            # Inicializar buscador
+            buscador = BuscadorCVE(nvd_api_key=nvd_api_key)
+            
+            
+            # Buscar vulnerabilidades
+            vulnerabilidades_halladas = buscador.buscar_vulnerabilidades_para_dependencia(
+                dependencia.nombre, dependencia.version
+            )
+            
+            nuevas_vulnerabilidades_count = 0
+            
+            # Guardar vulnerabilidades
             for vuln_data in vulnerabilidades_halladas:
-                existe = Vulnerabilidad.query.filter_by(cve_id=vuln_data['cve_id'], dependencia_id=dep.id).first()
+                existe = Vulnerabilidad.query.filter_by(
+                    cve_id=vuln_data['cve_id'], 
+                    dependencia_id=dependencia.id
+                ).first()
+                
                 if not existe:
-                    nueva_vuln = Vulnerabilidad(dependencia_id=dep.id, **vuln_data)
+                    nueva_vuln = Vulnerabilidad(
+                        dependencia_id=dependencia.id,
+                        cve_id=vuln_data['cve_id'],
+                        descripcion=vuln_data['descripcion'],
+                        puntuacion_cvss=vuln_data['puntuacion_cvss'],
+                        severidad=vuln_data['severidad']
+                    )
                     db.session.add(nueva_vuln)
                     nuevas_vulnerabilidades_count += 1
-        
-        db.session.commit()
-        return {
-            'message': 'Análisis de vulnerabilidades completado.',
-            'nuevas_vulnerabilidades_encontradas': nuevas_vulnerabilidades_count
-        }, 200
+            
+            db.session.commit()
+            
+            return {
+                'message': f'Análisis completado para {dependencia.nombre}',
+                'dependencia': dependencia.nombre,
+                'version': dependencia.version,
+                'nuevas_vulnerabilidades_encontradas': nuevas_vulnerabilidades_count,
+                'total_vulnerabilidades_encontradas': len(vulnerabilidades_halladas)
+            }, 200
+            
+        except Exception as e:
+            return {
+                'error': 'Error durante el análisis de la dependencia',
+                'details': str(e)
+            }, 500
+
 
 class ProyectoDependenciaUpdateResource(Resource):
     @auth_required
