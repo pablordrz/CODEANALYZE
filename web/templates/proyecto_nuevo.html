@@ -20,6 +20,24 @@
         </div>
 
         <div class="mb-3">
+          <label for="max-vulnerabilidades" class="form-label">Número Máximo de Vulnerabilidades Permitidas *</label>
+          <input type="number" class="form-control" id="max-vulnerabilidades" name="max-vulnerabilidades" min="0" placeholder="Ej: 5" required>
+          <div class="form-text">Obligatorio. Establece el límite máximo de vulnerabilidades permitidas.</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="nivel-criticidad" class="form-label">Nivel Máximo de Criticidad Permitido *</label>
+          <select class="form-control" id="nivel-criticidad" name="nivel-criticidad" required>
+            <option value="">Selecciona un nivel</option>
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+          <div class="form-text">Obligatorio. Selecciona el nivel máximo de criticidad permitido.</div>
+        </div>
+
+        <div class="mb-3">
           <label for="archivo-zip" class="form-label">Adjuntar Archivo de Dependencias (.zip)</label>
           <input type="file" class="form-control" id="archivo-zip" name="archivo-zip" accept=".zip">
           <div class="form-text">Opcional. Sube un .zip con el código fuente para analizar sus dependencias.</div>
@@ -73,6 +91,8 @@
           nombre: document.getElementById("nombre").value,
           descripcion: document.getElementById("descripcion").value,
           fecha: document.getElementById("fecha").value,
+          max_vulnerabilidades_permitidas: parseInt(document.getElementById("max-vulnerabilidades").value),
+          nivel_criticidad_maximo: document.getElementById("nivel-criticidad").value,
         };
 
         const proyectoResponse = await fetch(`${API_BASE_URL}/proyectos`, {

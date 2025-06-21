@@ -42,11 +42,27 @@ async function cargarDependencias() {
   dependencias.forEach(dep => {
     html += `<tr>
       <td>${dep.nombre}</td>
-      <td><input type="text" class="form-control" name="version_${dep.id}" value="${dep.version === 'No especificada' ? '' : dep.version}" placeholder="Introduce la versión"></td>
+      <td><input type="text" class="form-control version-input" name="version_${dep.id}" value="${dep.version === 'No especificada' ? '' : dep.version}" placeholder="Ej: 1.2.3" pattern="^[0-9]+(\.[0-9]+)*$" title="Formato: números separados por puntos (ej: 1, 1.2, 2.0.1)"></td>
     </tr>`;
   });
   html += '</tbody></table>';
   document.getElementById('dependencias-lista').innerHTML = html;
+  
+  // Añadir validación en tiempo real a los inputs
+  document.querySelectorAll('.version-input').forEach(input => {
+    input.addEventListener('input', function() {
+      const value = this.value;
+      const versionPattern = /^[0-9]+(\.[0-9]+)*$/;
+      
+      if (value && !versionPattern.test(value)) {
+        this.setCustomValidity('Formato inválido. Usa números separados por puntos (ej: 1, 1.2, 2.0.1)');
+        this.classList.add('is-invalid');
+      } else {
+        this.setCustomValidity('');
+        this.classList.remove('is-invalid');
+      }
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -54,6 +70,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("form-versiones-dependencias");
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    
+    // Validar que todas las versiones tengan formato correcto
+    const versionInputs = document.querySelectorAll('#dependencias-lista input[name^="version_"]');
+    const versionPattern = /^[0-9]+(\.[0-9]+)*$/;
+    let hasInvalidVersions = false;
+    
+    versionInputs.forEach(input => {
+      const value = input.value.trim();
+      if (value && !versionPattern.test(value)) {
+        input.classList.add('is-invalid');
+        hasInvalidVersions = true;
+      } else {
+        input.classList.remove('is-invalid');
+      }
+    });
+    
+    if (hasInvalidVersions) {
+      mostrarMensajeVersiones('Por favor, corrige los formatos de versión inválidos antes de continuar.', 'danger');
+      return;
+    }
+    
     const token = obtenerToken();
     const formData = new FormData(form);
     const dependenciasBody = document.querySelectorAll('#dependencias-lista input[name^="version_"]');

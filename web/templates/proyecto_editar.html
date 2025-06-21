@@ -21,6 +21,24 @@
         </div>
 
         <div class="mb-3">
+          <label for="max-vulnerabilidades" class="form-label">Número Máximo de Vulnerabilidades Permitidas *</label>
+          <input type="number" class="form-control" id="max-vulnerabilidades" name="max-vulnerabilidades" min="0" placeholder="Ej: 5" required>
+          <div class="form-text">Obligatorio. Establece el límite máximo de vulnerabilidades permitidas.</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="nivel-criticidad" class="form-label">Nivel Máximo de Criticidad Permitido *</label>
+          <select class="form-control" id="nivel-criticidad" name="nivel-criticidad" required>
+            <option value="">Selecciona un nivel</option>
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+          <div class="form-text">Obligatorio. Selecciona el nivel máximo de criticidad permitido.</div>
+        </div>
+
+        <div class="mb-3">
           <label for="archivo-zip" class="form-label">Reemplazar Archivo de Dependencias (.zip)</label>
           <input type="file" class="form-control" id="archivo-zip" name="archivo-zip" accept=".zip">
           <div class="form-text">Opcional. Sube un nuevo .zip para actualizar y re-analizar las dependencias.</div>
@@ -68,6 +86,8 @@
         document.getElementById("nombre").value = data.nombre;
         document.getElementById("descripcion").value = data.descripcion;
         document.getElementById("fecha").value = data.fecha.split('T')[0];
+        document.getElementById("max-vulnerabilidades").value = data.max_vulnerabilidades_permitidas || '';
+        document.getElementById("nivel-criticidad").value = data.nivel_criticidad_maximo || '';
     } catch (error) {
         mostrarMensaje(error.message, 'danger');
     }
@@ -92,7 +112,9 @@
       const body = {
         nombre: document.getElementById("nombre").value,
         descripcion: document.getElementById("descripcion").value,
-        fecha: document.getElementById("fecha").value
+        fecha: document.getElementById("fecha").value,
+        max_vulnerabilidades_permitidas: parseInt(document.getElementById("max-vulnerabilidades").value),
+        nivel_criticidad_maximo: document.getElementById("nivel-criticidad").value
       };
 
       const updateResponse = await fetch(`${API_BASE_URL}/proyectos/${proyectoId}`, {

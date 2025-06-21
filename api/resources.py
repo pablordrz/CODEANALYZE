@@ -15,6 +15,8 @@ proyecto_parser = reqparse.RequestParser()
 proyecto_parser.add_argument("nombre", type=str, required=True)
 proyecto_parser.add_argument("descripcion", type=str)
 proyecto_parser.add_argument("fecha", type=str, required=True)
+proyecto_parser.add_argument("max_vulnerabilidades_permitidas", type=int, required=True)
+proyecto_parser.add_argument("nivel_criticidad_maximo", type=str, required=True)
 
 class UsuarioListResource(Resource):
     @roles_required('admin')
@@ -139,7 +141,9 @@ class ProyectoListResource(Resource):
             
             return [{
                 "id": p.id, "nombre": p.nombre, "descripcion": p.descripcion,
-                "fecha": p.fecha.isoformat(), "usuario_id": p.usuario_id
+                "fecha": p.fecha.isoformat(), "usuario_id": p.usuario_id,
+                "max_vulnerabilidades_permitidas": p.max_vulnerabilidades_permitidas,
+                "nivel_criticidad_maximo": p.nivel_criticidad_maximo
             } for p in proyectos]
         except Exception as e:
             print(f"Error al obtener proyectos: {e}")
@@ -155,6 +159,8 @@ class ProyectoListResource(Resource):
             nombre=args["nombre"],
             descripcion=args["descripcion"],
             fecha=datetime.strptime(args["fecha"], "%Y-%m-%d").date(),
+            max_vulnerabilidades_permitidas=args.get("max_vulnerabilidades_permitidas"),
+            nivel_criticidad_maximo=args.get("nivel_criticidad_maximo"),
             usuario_id=user.id  # ✅ asignado desde el token
         )
 
@@ -187,7 +193,9 @@ class ProyectoResource(Resource):
             return {"error": "No autorizado"}, 403
         return {
             "id": p.id, "nombre": p.nombre, "descripcion": p.descripcion,
-            "fecha": p.fecha.isoformat(), "usuario_id": p.usuario_id
+            "fecha": p.fecha.isoformat(), "usuario_id": p.usuario_id,
+            "max_vulnerabilidades_permitidas": p.max_vulnerabilidades_permitidas,
+            "nivel_criticidad_maximo": p.nivel_criticidad_maximo
         }
 
     @auth_required
@@ -209,6 +217,8 @@ class ProyectoResource(Resource):
         p.nombre = args["nombre"]
         p.descripcion = args["descripcion"]
         p.fecha = datetime.strptime(args["fecha"], "%Y-%m-%d").date()
+        p.max_vulnerabilidades_permitidas = args.get("max_vulnerabilidades_permitidas")
+        p.nivel_criticidad_maximo = args.get("nivel_criticidad_maximo")
         db.session.commit()
         return {"message": "Proyecto actualizado"}
 

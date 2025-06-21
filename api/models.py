@@ -72,6 +72,10 @@ class Proyecto(db.Model):
     fecha = db.Column(db.Date, nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     
+    # Nuevas columnas para configuración de seguridad
+    max_vulnerabilidades_permitidas = db.Column(db.Integer, nullable=True, default=None)
+    nivel_criticidad_maximo = db.Column(db.String(20), nullable=True, default=None)  # LOW, MEDIUM, HIGH, CRITICAL
+    
     # Relación con SBOMs
     sbooms = db.relationship('Sboom', backref='proyecto', lazy=True, cascade='all, delete-orphan')
 
