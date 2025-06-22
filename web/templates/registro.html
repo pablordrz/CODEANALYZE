@@ -1,0 +1,104 @@
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Registro de Usuario</h3>
+                </div>
+                <div class="card-body">
+                    <form id="registro-form">
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label">Nombre Completo</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nombre de Usuario</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Registrarse</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p>¿Ya tienes una cuenta? <a href="/login">Iniciar Sesión</a></p>
+                    </div>
+                    <div id="mensaje" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("registro-form");
+    const mensajeDiv = document.getElementById("mensaje");
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirm_password").value;
+
+        // Validar que las contraseñas coincidan
+        if (password !== confirmPassword) {
+            mensajeDiv.innerHTML = '<div class="alert alert-danger">Las contraseñas no coinciden.</div>';
+            return;
+        }
+
+        // Validar longitud mínima de contraseña
+        if (password.length < 6) {
+            mensajeDiv.innerHTML = '<div class="alert alert-danger">La contraseña debe tener al menos 6 caracteres.</div>';
+            return;
+        }
+
+        const datosUsuario = {
+            nombre: document.getElementById("nombre").value,
+            email: document.getElementById("email").value,
+            username: document.getElementById("username").value,
+            password: password
+        };
+
+        fetch("http://localhost:5001/registro", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(datosUsuario)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => {
+                    throw new Error(err.error || "Error al registrar usuario.");
+                });
+            }
+            return res.json();
+        })
+        .then(data => {
+            mensajeDiv.innerHTML = `
+                <div class="alert alert-success">Usuario registrado exitosamente. Redirigiendo al login...</div>`;
+            
+            // Redirigir al login después de 2 segundos
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        })
+        .catch(err => {
+            console.error("Error al registrar usuario:", err);
+            mensajeDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+        });
+    });
+});
+</script> 

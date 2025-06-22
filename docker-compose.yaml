@@ -1,0 +1,79 @@
+services:
+
+  flaskapp:
+    platform: linux/amd64
+    container_name: appsawer-web
+    image: agsalguero/saw:latest
+    ports:
+      - "5004:5000"
+    volumes:
+      - ./web:/app
+    environment:
+      FLASK_ENV: development
+    depends_on:
+      - api
+      - chat
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
+
+  chat:
+    platform: linux/amd64
+    container_name: appsawer-chat
+    image: agsalguero/saw:latest
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./chat:/app
+    environment:
+      FLASK_ENV: development
+    depends_on:
+      - api
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
+  
+  api:
+    platform: linux/amd64
+    container_name: apisawer-api
+    image: agsalguero/saw:latest
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./api:/app
+    environment:
+      FLASK_ENV: development
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: flask_database
+      DB_USER: usuario
+      DB_PASSWORD: password
+    depends_on:
+      - mariadb
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp nvdlib packaging google-generativeai && flask run --host=0.0.0.0 --port=5000 --debug"
+
+  mariadb:
+    platform: linux/amd64
+    image: mariadb:latest
+    container_name: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: flask_database
+      MYSQL_USER: usuario
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./db_data:/var/lib/mysql
+      - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql
+
+  phpmyadmin:
+    platform: linux/amd64
+    image: phpmyadmin/phpmyadmin
+    container_name: sawer-phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: usuario
+      PMA_PASSWORD: password
+    ports:
+      - "8080:80"
+    depends_on:
+      - mariadb

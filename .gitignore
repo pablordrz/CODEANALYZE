@@ -1,0 +1,14 @@
+# Ignorar archivos compilados de Python
+__pycache__/
+*.py[cod]
+
+# Ignorar archivos de base de datos y logs
+*.db
+*.sqlite3
+*.ibd
+*.log
+*.pid
+
+# Otros posibles archivos generados
+*.swp
+*.tmp

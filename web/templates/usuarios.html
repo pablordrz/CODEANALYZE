@@ -1,0 +1,165 @@
+{% block content %}
+<div class="row m-0"> <!-- Fila 2 del Contenedor -->
+  <div class="container-xl m-0" id="alert-container">
+    <div class="alerta">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-dismissible alert-warning">
+          <div class="row">
+            <div class="col-lg-8 col-10 text-start">
+              <h4 class="alert-heading">Atención!</h4>
+              {{ message }}
+            </div>
+            <div class="col-lg-4 col-2">
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+
+<div class="container mt-5">
+  <h1 class="text-center mb-4">Gestión de Usuarios</h1>
+  <div class="d-flex justify-content-between mb-3">
+    <a href="{{ url_for('usuario_nuevo') }}" class="btn btn-primary">Añadir Usuario</a>
+  </div>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="usuarios-table-body">
+      <!-- Los usuarios serán cargados aquí dinámicamente -->
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+<script>
+  // Obtener token desde localStorage o sessionStorage
+  function obtenerToken() {
+    return localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+  }
+
+  // Función para decodificar el token
+  function decodificarToken(token) {
+    try {
+      // El token JWT tiene 3 partes separadas por puntos
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      console.error('Error al decodificar el token:', e);
+      return null;
+    }
+  }
+
+  // Mostrar información del token
+  function mostrarInfoToken() {
+    const token = obtenerToken();
+    if (token) {
+      const tokenDecodificado = decodificarToken(token);
+      console.log('Token decodificado:', tokenDecodificado);
+      alert('Información del token:\n' + JSON.stringify(tokenDecodificado, null, 2));
+    } else {
+      alert('No hay token disponible');
+    }
+  }
+
+  // Cargar los usuarios desde la API con token
+  function cargarUsuarios() {
+    const token = obtenerToken();
+    if (!token) {
+      alert("No estás autenticado.");
+      return;
+    }
+
+    fetch("http://localhost:5001/usuarios", {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Error al cargar usuarios.");
+      return res.json();
+    })
+    .then(usuarios => {
+      const tableBody = document.getElementById("usuarios-table-body");
+      tableBody.innerHTML = '';  // Limpiar cualquier contenido previo
+
+      usuarios.forEach(usuario => {
+        const row = document.createElement("tr");
+        row.dataset.id = usuario.id;
+
+        row.innerHTML = `
+          <td>${usuario.id}</td>
+          <td>${usuario.nombre}</td>
+          <td>${usuario.email}</td>
+          <td>
+            <a href="/usuario/editar/${usuario.id}" class="btn btn-warning btn-sm">Editar</a>
+            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario(${usuario.id})">Eliminar</button>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error("Error al cargar los usuarios:", err);
+      alert("Hubo un error al cargar los usuarios.");
+    });
+  }
+
+  // Eliminar usuario con token
+  function eliminarUsuario(id) {
+    if (confirm("¿Estás seguro de que quieres eliminar este usuario?")) {
+      const token = obtenerToken();
+      if (!token) {
+        alert("No estás autenticado.");
+        return;
+      }
+
+      fetch(`http://localhost:5001/usuarios/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Error al eliminar el usuario.");
+        return res.json();
+      })
+      .then(() => {
+        const row = document.querySelector(`tr[data-id='${id}']`);
+        if (row) row.remove();
+      })
+      .catch(err => {
+        alert(`Error: ${err.message}`);
+      });
+    }
+  }
+
+  // Ejecutar al cargar la página
+  window.onload = function() {
+    cargarUsuarios();
+  };
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

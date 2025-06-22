@@ -1,0 +1,114 @@
+{% block content %}
+<div class="row m-0"> <div class="container-xl m-0" id="alert-container"><div class="alerta">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+          <div class="alert alert-dismissible alert-warning ">
+            <div class="row">
+                <div class="col-lg-8 col-10 text-start">
+                    <h4 class="alert-heading">Atención!</h4>
+                     {{ message }}
+                </div>
+                <div class="col-lg-4 col-2">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div></div>
+</div>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Iniciar Sesión</h3>
+                </div>
+                <div class="card-body">
+                    <form id="loginForm" onsubmit="handleLogin(event)">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Usuario</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p>¿No tienes una cuenta? <a href="/registro">Registrarse</a></p>
+                    </div>
+                     <div id="login-error-message" class="text-danger fw-bold text-center mt-3" style="min-height: 1.5em;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    async function handleLogin(event) {
+        event.preventDefault(); // Evita el envío tradicional del formulario
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorMessageDiv = document.getElementById('login-error-message');
+
+        // Limpia cualquier mensaje de error anterior
+        errorMessageDiv.textContent = '';
+
+        try {
+            // Paso 1: Autenticarse contra el endpoint correcto de la API (/auth)
+            const apiResponse = await fetch('http://localhost:5001/auth', {  
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (!apiResponse.ok) {
+                // Si las credenciales son incorrectas (error 401) o hay otro error de la API
+                errorMessageDiv.textContent = "Usuario o contraseña incorrectos.";
+                return; // Detiene la ejecución
+            }
+
+            const data = await apiResponse.json();
+
+            if (data.access_token) {
+                
+                // *** LA LÍNEA CLAVE DEL ARREGLO ***
+                // Paso 2: Guardar el token en el almacenamiento local del navegador para que JS lo use en otras páginas.
+                localStorage.setItem('access_token', data.access_token);
+
+                // Paso 3: Sincronizar la sesión con el backend para que el servidor reconozca al usuario.
+                const syncResponse = await fetch('/sync-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ access_token: data.access_token })
+                });
+
+                if (!syncResponse.ok) {
+                   // Si falla la sincronización, muestra un error
+                   throw new Error('Error al sincronizar la sesión en el servidor.');
+                }
+                
+                // Paso 4: Una vez todo está guardado y sincronizado, redirige al usuario.
+                window.location.href = '/chat'; 
+            } else {
+                errorMessageDiv.textContent = "El servidor no devolvió un token de acceso.";
+            }
+        } catch (error) {
+            console.error('Error en el proceso de login:', error);
+            errorMessageDiv.textContent = 'Error de conexión. Por favor, inténtelo de nuevo más tarde.';
+        }
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endblock %}

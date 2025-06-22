@@ -1,0 +1,134 @@
+{% block content %}
+<div class="container my-5">
+  <div class="card shadow-lg">
+    <div class="card-body">
+      <h1 class="card-title text-center mb-4">Introduce la versión de tus dependencias</h1>
+      <form id="form-versiones-dependencias">
+        <div id="dependencias-lista">
+          <!-- Aquí se cargará la tabla de dependencias con inputs para la versión -->
+        </div>
+        <div class="d-grid mt-4">
+          <button type="submit" class="btn btn-success btn-lg">Guardar versiones</button>
+        </div>
+      </form>
+      <div id="mensaje-versiones" class="mt-3"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API_BASE_URL = 'http://localhost:5001';
+const proyectoId = {{ proyecto_id }};
+
+function obtenerToken() {
+  return localStorage.getItem('access_token');
+}
+
+function mostrarMensajeVersiones(mensaje, tipo) {
+  const mensajeDiv = document.getElementById("mensaje-versiones");
+  mensajeDiv.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+}
+
+async function cargarDependencias() {
+  const token = obtenerToken();
+  const response = await fetch(`${API_BASE_URL}/proyectos/${proyectoId}/dependencias`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await response.json();
+  const dependencias = data.dependencias || [];
+  let html = '<table class="table table-bordered"><thead><tr><th>Dependencia</th><th>Versión</th></tr></thead><tbody>';
+  dependencias.forEach(dep => {
+    html += `<tr>
+      <td>${dep.nombre}</td>
+      <td><input type="text" class="form-control version-input" name="version_${dep.id}" value="${dep.version === 'No especificada' ? '' : dep.version}" placeholder="Ej: 1.2.3" pattern="^[0-9]+(\.[0-9]+)*$" title="Formato: números separados por puntos (ej: 1, 1.2, 2.0.1)"></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('dependencias-lista').innerHTML = html;
+  
+  // Añadir validación en tiempo real a los inputs
+  document.querySelectorAll('.version-input').forEach(input => {
+    input.addEventListener('input', function() {
+      const value = this.value;
+      const versionPattern = /^[0-9]+(\.[0-9]+)*$/;
+      
+      if (value && !versionPattern.test(value)) {
+        this.setCustomValidity('Formato inválido. Usa números separados por puntos (ej: 1, 1.2, 2.0.1)');
+        this.classList.add('is-invalid');
+      } else {
+        this.setCustomValidity('');
+        this.classList.remove('is-invalid');
+      }
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  cargarDependencias();
+  const form = document.getElementById("form-versiones-dependencias");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    // Validar que todas las versiones tengan formato correcto
+    const versionInputs = document.querySelectorAll('#dependencias-lista input[name^="version_"]');
+    const versionPattern = /^[0-9]+(\.[0-9]+)*$/;
+    let hasInvalidVersions = false;
+    
+    versionInputs.forEach(input => {
+      const value = input.value.trim();
+      if (value && !versionPattern.test(value)) {
+        input.classList.add('is-invalid');
+        hasInvalidVersions = true;
+      } else {
+        input.classList.remove('is-invalid');
+      }
+    });
+    
+    if (hasInvalidVersions) {
+      mostrarMensajeVersiones('Por favor, corrige los formatos de versión inválidos antes de continuar.', 'danger');
+      return;
+    }
+    
+    const token = obtenerToken();
+    const formData = new FormData(form);
+    const dependenciasBody = document.querySelectorAll('#dependencias-lista input[name^="version_"]');
+    let exitos = 0, errores = 0;
+    for (const input of dependenciasBody) {
+      const depId = input.name.replace('version_', '');
+      const version = input.value.trim();
+      if (version) {
+        const response = await fetch(`${API_BASE_URL}/proyectos/${proyectoId}/dependencias/${depId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ version })
+        });
+        if (response.ok) {
+          exitos++;
+        } else {
+          errores++;
+        }
+      }
+    }
+    if (errores === 0) {
+      mostrarMensajeVersiones('¡Versiones guardadas! Redirigiendo a proyectos...', 'success');
+      
+      // Establecer una bandera en sessionStorage para iniciar el escaneo en la página de proyectos
+      sessionStorage.setItem('startVulnerabilityScan', 'true');
+
+      // Redirigir a la página de proyectos
+      setTimeout(() => {
+        window.location.href = `/chat/${proyectoId}`;
+      }, 1200);
+
+    } else {
+      mostrarMensajeVersiones('Algunas versiones no se pudieron guardar.', 'danger');
+    }
+  });
+});
+</script>
+{% endblock %} 

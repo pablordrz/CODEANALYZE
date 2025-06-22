@@ -1,0 +1,389 @@
+.curved-section {
+    position: relative;
+    background: transparent;
+    box-sizing:border-box;
+    height: 120px;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+.fondo{
+    background: linear-gradient(to bottom right, #fefefe, #768595);
+}
+
+.curved-svg {
+    position: relative;
+    top: -1px;
+    bottom: -1px;
+    padding: 0;
+    margin: 0;
+    left: 0;
+    width: 100%;
+    height: 120%;
+}
+
+#hero {
+    text-align: center;
+    background: linear-gradient(135deg, #fefefe, #7c8a99);
+}
+
+#tarjeta-hero {
+    max-width: 30rem;
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+@media screen and (min-width: 768px) {
+    #tarjeta-hero {
+        max-width: 18rem;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    
+}
+
+.sombra {
+    
+    box-shadow: -1px 1px 5px grey !important;
+}
+
+#logo {
+    height: 50px;
+
+}
+
+#subtitle{
+    color: #818c99;
+    
+}
+
+.circle { /* Circulo para los numeros */
+    width: 40px;
+    height: 40px;
+    background-color: #98A6A8;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0px auto;
+}
+.text { /*Color y tipografia del texto */
+    color: #2c4259;
+    font-family: 'Roboto';
+}
+#fade-in-right.visible { /* Efecto para la aparición del texto*/
+    opacity: 0;
+    transform: translateX(100px); /* Empieza 100px a la derecha */
+    animation: fadeInRight 1s ease-out forwards;
+}
+
+#fade-in-right { /* Efecto para la aparición del texto*/
+    opacity: 0;
+}
+
+/* Aplica el efecto escalonado usando nth-child */
+#fade-in-right:nth-child(1) {
+        animation-delay: 0.5s;
+ }
+#fade-in-right:nth-child(2) {
+        animation-delay: 2.0s;
+ }
+#fade-in-right:nth-child(3) {
+        animation-delay: 3.5s;
+}
+
+@keyframes fadeInRight {
+    from {
+    opacity: 0;
+    transform: translateX(100px);
+    }
+    to {
+    opacity: 1;
+    transform: translateX(0);
+    }
+}
+    
+
+.curv {
+    width: 100%;
+    margin: 0%;
+    padding: 0%;
+    box-sizing: border-box;
+}
+
+.curved-section {
+    position: relative;
+    background: transparent;
+    box-sizing:border-box;
+    height: 120px;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+.curved-section-down {
+    position: relative;
+    background: transparent;
+    box-sizing:border-box;
+    height: 120px;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+.curved-svg {
+    position: relative;
+    top: -1px;
+    bottom: -1px;
+    padding: 0;
+    margin: 0;
+    left: 0;
+    width: 100%;
+    height: 120%;
+}
+
+#non-padding {
+    padding: 0;
+    margin: 0;
+    width: 100vw; /* Ocupar todo el ancho de la pantalla */
+    max-width: 100%;
+}
+.letra_pequeña{
+    font-size: 0.9em;
+}
+
+#card-pading {
+    padding: 0;
+    opacity: 0;
+    transform: scale(0.3); /* Comienza más pequeño */
+
+}
+
+#card-pading.visible {
+    opacity: 1;
+    transform: scale(1);
+    animation: aparecer 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes aparecer {
+    from {
+        opacity: 0;
+        transform: scale(0.3); /* Inicia desde un tamaño más pequeño */
+    }
+    to {
+        opacity: 1;
+        transform: scale(1); /* Crece hasta el tamaño normal */
+    }
+}
+.papelera {
+    width: 28px;
+    height: 28px;
+    background-color: #e74c3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    opacity: 0; /* Oculta la papelera por defecto */
+    visibility: hidden; /* Evita que ocupe espacio cuando está oculta */
+}
+.papelera_1 {
+    width: 28px;
+    height: 28px;
+    background-color: #e74c3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+#proyect:hover  {
+    padding-top: 2% !important;
+    padding-bottom: 2% !important;
+}
+.list-group-item:hover .papelera {
+    opacity: 1; /* Hace visible la papelera al pasar el ratón */
+    visibility: visible;
+
+
+}
+
+.papelera:hover {
+    background-color: darkred; /* Cambio de color al pasar el mouse */
+}
+.edit {
+    width: 28px;
+    height: 28px;
+    background-color: #3c97e7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    opacity: 0; 
+    visibility: hidden; 
+}
+
+#proyecttt:hover {
+    background-color: #afafaf;
+    transition: background-color 0.3s ease;
+}
+
+.edit_1 {
+    width: 28px;
+    height: 28px;
+    background-color: #3c97e7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+.list-group-item:hover .edit {
+    opacity: 1;
+    visibility: visible;
+
+
+}
+
+.edit:hover {
+    background-color: rgb(61, 84, 200); /* Cambio de color al pasar el mouse */
+}
+#añadir{
+    width: 28px;
+    height: 28px;
+    background-color: #18bc9c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 30px;
+}
+#añadir_1{
+    width: 28px;
+    height: 28px;
+    background-color: #18bc9c;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 30px;
+}
+/*JORGE*/
+
+.color_fondo_pie {
+    background-color: #23394d; /* Gris oscuro */
+}
+.row_titulo_pie {
+    color: white;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+
+    word-break: break-all; /* Permite que las palabras se dividan en cualquier punto */
+    overflow-wrap: break-word; /* Asegura que las palabras no sobresalgan */
+    white-space: normal; /* Permite que el texto se ajuste en varias líneas */
+    hyphens: auto; /* Agrega guiones cuando sea posible para mejorar la legibilidad */
+}
+.row_cuerpo_pie {
+    color: rgb(29, 143, 133);
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+
+    word-break: break-all; /* Permite que las palabras se dividan en cualquier punto */
+    overflow-wrap: break-word; /* Asegura que las palabras no sobresalgan */
+    white-space: normal; /* Permite que el texto se ajuste en varias líneas */
+    hyphens: auto; /* Agrega guiones cuando sea posible para mejorar la legibilidad */
+}
+
+.margen_superior_pie {
+    margin-top: 5%;
+}
+.margen_inferior_pie {
+    margin-bottom: 50px;
+}
+.custom_hr_pie_arriba {
+    border: 1.5px solid rgb(18, 35, 58); /* Cambia el color de la línea */
+    width: 100%;
+}
+.custom_hr_pie_abajo {
+    border: 0.5px solid rgb(18, 35, 58); /* Cambia el color de la línea */
+    width: 100%;
+}
+.margen_izquierdo_pie { 
+    margin-left: 5%;
+}
+.margen_derecho_pie {
+    margin-right: 5%;
+}
+#pie a{
+    color: inherit; /* Mantiene el color del texto */
+    text-decoration: none; /* Elimina el subrayado */
+    font-size: 1em; /* Tamaño de la fuente */
+    font-weight: 500; /* Grosor de la fuente */
+}
+.container-fluid.color_fondo_pie {
+    padding-left: 5%;
+    padding-right: 5%;
+}
+.cajas_pie {
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 0px;
+    background-color: #24384a;
+    color: white;
+    border-bottom: 1px solid rgb(19, 47, 55);
+    margin-bottom: 15px;
+    margin-top: 40px;
+}
+
+/*Desplegable*/
+#desplegable {
+    background-color: #e5e4e8;
+}
+
+#versiones-pdf-btn {
+    background-color: #3c97e7;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.list-group-item .flex-grow-1 {
+    min-width: 0; /* Permite que el elemento se encoja en un contenedor flex */
+    overflow-wrap: break-word; /* Permite que el texto largo se ajuste a la siguiente línea */
+}
+
+.list-group-item .btn-group {
+    margin-left: 1rem; /* Añade espacio a la izquierda de los botones */
+}
