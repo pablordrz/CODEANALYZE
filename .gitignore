@@ -5,7 +5,6 @@ __pycache__/
 # Ignorar archivos de base de datos y logs
 *.db
 *.sqlite3
-*.ibd
 *.log
 *.pid
 

@@ -83,7 +83,7 @@ class ProyectoUploadResource(Resource):
                 
                 print("--- Iniciando análisis de dependencias con Gemini ---")
                 
-                api_key = "AIzaSyBj7roIzkzsuRvbmCgZcV3Os6mMa5kceSc"
+                api_key = app.config.get('GEMINI_API_KEY')
                 if not api_key:
                     raise ValueError("La variable de entorno GEMINI_API_KEY no está configurada.")
                 
@@ -186,8 +186,11 @@ class VulnerabilityScanResource(Resource):
             # Obtener la API key de NVD
             nvd_api_key = app.config.get('NVD_API_KEY')
             
+            # Obtener la API key de Gemini
+            gemini_api_key = app.config.get('GEMINI_API_KEY')
+            
             # Inicializar buscador
-            buscador = BuscadorCVE(nvd_api_key=nvd_api_key)
+            buscador = BuscadorCVE(nvd_api_key=nvd_api_key, gemini_api_key=gemini_api_key)
             
             nuevas_vulnerabilidades_count = 0
             dependencias_procesadas = 0
@@ -199,6 +202,8 @@ class VulnerabilityScanResource(Resource):
                 dependencias_procesadas += 1
                 
                 try:
+                    # Limpiar vulnerabilidades antiguas para esta dependencia
+                    Vulnerabilidad.query.filter_by(dependencia_id=dep.id).delete()
                     
                     # Buscar vulnerabilidades para esta dependencia
                     vulnerabilidades_halladas = buscador.buscar_vulnerabilidades_para_dependencia(
@@ -281,11 +286,17 @@ class VulnerabilityScanSingleResource(Resource):
             if dependencia.sboom.proyecto.usuario_id != current_user().id:
                 return {'error': 'No tienes permiso para analizar esta dependencia'}, 403
             
+            # Limpiar vulnerabilidades antiguas para esta dependencia
+            Vulnerabilidad.query.filter_by(dependencia_id=dependencia.id).delete()
+            
             # Obtener la API key de NVD
             nvd_api_key = app.config.get('NVD_API_KEY')
             
+            # Obtener la API key de Gemini
+            gemini_api_key = app.config.get('GEMINI_API_KEY')
+            
             # Inicializar buscador
-            buscador = BuscadorCVE(nvd_api_key=nvd_api_key)
+            buscador = BuscadorCVE(nvd_api_key=nvd_api_key, gemini_api_key=gemini_api_key)
             
             
             # Buscar vulnerabilidades
