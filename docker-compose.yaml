@@ -12,23 +12,8 @@ services:
       FLASK_ENV: development
     depends_on:
       - api
-      - chat
     command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
 
-  chat:
-    platform: linux/amd64
-    container_name: appsawer-chat
-    image: agsalguero/saw:latest
-    ports:
-      - "5002:5000"
-    volumes:
-      - ./chat:/app
-    environment:
-      FLASK_ENV: development
-    depends_on:
-      - api
-    command: /bin/sh -c "pip install flask_praetorian requests aiohttp && flask run --host=0.0.0.0 --port=5000 --debug"
-  
   api:
     platform: linux/amd64
     container_name: apisawer-api

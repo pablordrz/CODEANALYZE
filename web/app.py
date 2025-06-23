@@ -20,7 +20,6 @@ CHAT_URL = "http://localhost:5002"  # URL del servicio de chat
 # Configuración de Praetorian
 app.config['JWT_ACCESS_LIFESPAN'] = timedelta(hours=1)
 app.config['JWT_REFRESH_LIFESPAN'] = timedelta(days=30)
-app.config['JWT_SECRET_KEY'] = 'tu_clave_secreta_aqui'
 
 db = SQLAlchemy()
 guard = Praetorian()

@@ -11,18 +11,14 @@ import os
 import zipfile
 import tempfile
 from werkzeug.utils import secure_filename
-import re
-from logger_config import logger
 
+from logger_config import logger
 import uuid
 import json
 from datetime import datetime, timezone
 from fpdf import FPDF
 import google.generativeai as genai
-
 # --- Nuevas importaciones ---
-from filtrado import StaticDependencyAnalyzer # Importamos la nueva clase
-from deepseek_dependency_extractor import DeepSeekDependencyExtractor
 import asyncio
 from gemini import GeminiDependencyAnalyzer
 from vulnerability_scanner import BuscadorCVE
@@ -33,7 +29,6 @@ CORS(app)
 
 app.config['JWT_ACCESS_LIFESPAN'] = timedelta(hours=1)
 app.config['JWT_REFRESH_LIFESPAN'] = timedelta(days=30)
-app.config['JWT_SECRET_KEY'] = 'tu_clave_secreta_aqui'
 
 db.init_app(app)
 guard = Praetorian()
@@ -306,79 +301,7 @@ class VulnerabilityScanResource(Resource):
                 'details': str(e)
             }, 500
 
-
-class VulnerabilityScanSingleResource(Resource):
-    @auth_required
-    def post(self, dependencia_id):
-        """
-        Realiza un análisis de vulnerabilidades para una dependencia específica.
-        """
-        from models import db, Dependencia, Vulnerabilidad
-        
-        try:
-            # Obtener la dependencia
-            dependencia = Dependencia.query.get_or_404(dependencia_id)
-            
-            # Verificar permisos
-            if dependencia.sboom.proyecto.usuario_id != current_user().id:
-                return {'error': 'No tienes permiso para analizar esta dependencia'}, 403
-            
-            # Limpiar vulnerabilidades antiguas para esta dependencia
-            Vulnerabilidad.query.filter_by(dependencia_id=dependencia.id).delete()
-            
-            # Obtener la API key de NVD
-            nvd_api_key = app.config.get('NVD_API_KEY')
-            
-            # Obtener la API key de Gemini
-            gemini_api_key = app.config.get('GEMINI_API_KEY')
-            
-            # Inicializar buscador
-            buscador = BuscadorCVE(nvd_api_key=nvd_api_key, gemini_api_key=gemini_api_key)
-            
-            
-            # Buscar vulnerabilidades
-            tipo_archivo = get_tipo_archivo(getattr(dependencia, 'archivo_origen', None))
-            vulnerabilidades_halladas = buscador.buscar_vulnerabilidades_para_dependencia(
-                dependencia.nombre, dependencia.version, tipo_archivo
-            )
-            
-            nuevas_vulnerabilidades_count = 0
-            
-            # Guardar vulnerabilidades
-            for vuln_data in vulnerabilidades_halladas:
-                existe = Vulnerabilidad.query.filter_by(
-                    cve_id=vuln_data['cve_id'], 
-                    dependencia_id=dependencia.id
-                ).first()
-                
-                if not existe:
-                    nueva_vuln = Vulnerabilidad(
-                        dependencia_id=dependencia.id,
-                        cve_id=vuln_data['cve_id'],
-                        descripcion=vuln_data['descripcion'],
-                        puntuacion_cvss=vuln_data['puntuacion_cvss'],
-                        severidad=vuln_data['severidad']
-                    )
-                    db.session.add(nueva_vuln)
-                    nuevas_vulnerabilidades_count += 1
-            
-            db.session.commit()
-            
-            return {
-                'message': f'Análisis completado para {dependencia.nombre}',
-                'dependencia': dependencia.nombre,
-                'version': dependencia.version,
-                'nuevas_vulnerabilidades_encontradas': nuevas_vulnerabilidades_count,
-                'total_vulnerabilidades_encontradas': len(vulnerabilidades_halladas)
-            }, 200
-            
-        except Exception as e:
-            return {
-                'error': 'Error durante el análisis de la dependencia',
-                'details': str(e)
-            }, 500
-            
-            
+  
 def verifica_aceptabilidad(proyecto):
     max_vuln = proyecto.max_vulnerabilidades_permitidas
     nivel_maximo = (proyecto.nivel_criticidad_maximo or '').upper()
