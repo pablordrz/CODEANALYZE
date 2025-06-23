@@ -38,7 +38,41 @@ guard = Praetorian()
 guard.init_app(app, Usuario)
 api = Api(app)
 
+# --- Mapeo de extensiones a lenguajes ---
+ext_to_lang = {
+    '.py': 'Python',
+    '.js': 'JavaScript',
+    '.java': 'Java',
+    '.c': 'C',
+    '.cpp': 'C++',
+    '.cs': 'C#',
+    '.rb': 'Ruby',
+    '.php': 'PHP',
+    '.go': 'Go',
+    '.rs': 'Rust',
+    '.ts': 'TypeScript',
+    '.tsx': 'TypeScript',
+    '.m': 'Objective-C',
+    '.swift': 'Swift',
+    '.kt': 'Kotlin',
+    '.scala': 'Scala',
+    '.h': 'C/C++ Header',
+    '.hpp': 'C++ Header',
+    '.json': 'JSON',
+    '.xml': 'XML',
+    '.yml': 'YAML',
+    '.yaml': 'YAML',
+    '.toml': 'TOML',
+    '.gradle': 'Gradle',
+    '.pom': 'Maven',
+    '.txt': 'Texto',
+}
 
+def get_tipo_archivo(archivo_origen):
+    if not archivo_origen:
+        return None
+    _, ext = os.path.splitext(archivo_origen)
+    return ext_to_lang.get(ext.lower(), ext.lower().replace('.', '').upper() if ext else None)
 
 class AuthResource(Resource):
     def post(self):
@@ -207,8 +241,9 @@ class VulnerabilityScanResource(Resource):
                     Vulnerabilidad.query.filter_by(dependencia_id=dep.id).delete()
                     
                     # Buscar vulnerabilidades para esta dependencia
+                    tipo_archivo = get_tipo_archivo(getattr(dep, 'archivo_origen', None))
                     vulnerabilidades_halladas = buscador.buscar_vulnerabilidades_para_dependencia(
-                        dep.nombre, dep.version
+                        dep.nombre, dep.version, tipo_archivo
                     )
                     
                     # Guardar vulnerabilidades en la base de datos
@@ -301,8 +336,9 @@ class VulnerabilityScanSingleResource(Resource):
             
             
             # Buscar vulnerabilidades
+            tipo_archivo = get_tipo_archivo(getattr(dependencia, 'archivo_origen', None))
             vulnerabilidades_halladas = buscador.buscar_vulnerabilidades_para_dependencia(
-                dependencia.nombre, dependencia.version
+                dependencia.nombre, dependencia.version, tipo_archivo
             )
             
             nuevas_vulnerabilidades_count = 0
