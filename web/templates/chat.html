@@ -324,12 +324,52 @@
         }
     }
 
-    document.getElementById('informe-pdf-btn').addEventListener('click', () => {
+    document.getElementById('informe-pdf-btn').addEventListener('click', async function() {
         if (!proyectoSeleccionadoId) {
             mostrarAlerta('Primero selecciona un proyecto.', 'warning');
             return;
         }
-        alert(`Funcionalidad de generar PDF para el proyecto ${proyectoSeleccionadoId} no implementada.`);
+        const token = obtenerToken();
+        if (!token) {
+            mostrarAlerta('No estás autenticado. Por favor, inicia sesión.', 'error');
+            return;
+        }
+        mostrarCarga('Generando informe PDF...');
+        try {
+            const response = await fetch(`${API_BASE_URL}/proyectos/${proyectoSeleccionadoId}/informe_pdf`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+            }
+            // Obtener el nombre del proyecto para el nombre del archivo
+            const proyectoResponse = await fetch(`${API_BASE_URL}/proyectos/${proyectoSeleccionadoId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            let nombreProyecto = 'proyecto';
+            if (proyectoResponse.ok) {
+                const proyectoData = await proyectoResponse.json();
+                nombreProyecto = proyectoData.nombre || 'proyecto';
+            }
+            const nombreArchivo = nombreProyecto.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() + '_informe.pdf';
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = nombreArchivo;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            // Limpiar mensaje de carga
+            document.getElementById('alert-container').innerHTML = '';
+        } catch (error) {
+            console.error('Error al descargar el informe PDF:', error);
+            mostrarAlerta(`No se pudo descargar el informe: ${error.message}`, 'error');
+        }
     });
 
     document.getElementById('sbom-btn').addEventListener('click', async () => { // Se convierte la función en async

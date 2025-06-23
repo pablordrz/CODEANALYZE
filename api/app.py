@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file
 from flask_restful import Api, Resource
 import toml
 from models import db, Usuario, Proyecto, Sboom, Dependencia, Vulnerabilidad
@@ -17,6 +17,8 @@ from logger_config import logger
 import uuid
 import json
 from datetime import datetime, timezone
+from fpdf import FPDF
+import google.generativeai as genai
 
 # --- Nuevas importaciones ---
 from filtrado import StaticDependencyAnalyzer # Importamos la nueva clase
@@ -65,7 +67,6 @@ ext_to_lang = {
     '.toml': 'TOML',
     '.gradle': 'Gradle',
     '.pom': 'Maven',
-    '.txt': 'Texto',
 }
 
 def get_tipo_archivo(archivo_origen):
@@ -507,8 +508,129 @@ class SbomGenerateResource(Resource):
         
         return response
 
+@app.route('/proyectos/<int:proyecto_id>/informe_pdf', methods=['GET'])
+@auth_required
+def generar_informe_pdf(proyecto_id):
+    from models import Proyecto, Sboom, Dependencia, Vulnerabilidad
+    import asyncio
+    import google.generativeai as genai
+    from flask import send_file
+    import tempfile
+    import os
 
+    user = current_user()
+    proyecto = Proyecto.query.get_or_404(proyecto_id)
+    if proyecto.usuario_id != user.id:
+        return {'error': 'No tienes permisos para este proyecto'}, 403
 
+    sboom = Sboom.query.filter_by(proyecto_id=proyecto.id).order_by(Sboom.id.desc()).first()
+    dependencias = sboom.dependencias if sboom else []
+
+    # Construir el prompt para Gemini
+    if not dependencias:
+        prompt = f'El proyecto "{proyecto.nombre}" no tiene dependencias ni vulnerabilidades.'
+    else:
+        prompt = f'El proyecto "{proyecto.nombre}" presenta las siguientes vulnerabilidades:'
+        for dep in dependencias:
+            lenguaje = None
+            if dep.archivo_origen:
+                _, ext = os.path.splitext(dep.archivo_origen)
+                lenguaje = ext_to_lang.get(ext.lower(), ext.lower().replace(".", "").upper() if ext else None)
+            if dep.vulnerabilidades:
+                for vuln in dep.vulnerabilidades:
+                    prompt += (f"\n- Dependencia: {dep.nombre} (versión: {dep.version or 'No especificada'}, lenguaje: {lenguaje or 'Desconocido'}) "
+                              f"presenta la vulnerabilidad {vuln.cve_id} (criticidad: {vuln.severidad or 'N/A'}): {vuln.descripcion}")
+            else:
+                prompt += (f"\n- Dependencia: {dep.nombre} (versión: {dep.version or 'No especificada'}, lenguaje: {lenguaje or 'Desconocido'}) no presenta vulnerabilidades conocidas.")
+
+    # Llamar a Gemini para generar el texto del informe
+    gemini_api_key = app.config.get('GEMINI_API_KEY')
+    genai.configure(api_key=gemini_api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    gemini_prompt = (
+        prompt +
+        """
+
+Redacta un informe profesional y claro para un responsable de seguridad, siguiendo el siguiente esquema y devolviendo el resultado en TEXTO PLANO (sin markdown, sin comillas, sin asteriscos, sin guiones, sin numeraciones, sin formato especial):
+
+- TÍTULO PRINCIPAL: Informe de Vulnerabilidades del Proyecto [NOMBRE DEL PROYECTO]
+- Fecha: [Fecha de hoy]
+- Destinatario: Responsable de Seguridad
+- Asunto: Análisis de Vulnerabilidades del Proyecto [NOMBRE DEL PROYECTO]
+- Introducción: Breve explicación del propósito del informe.
+- Resumen: Resumen ejecutivo de la situación de seguridad del proyecto.
+- Detalles de las Vulnerabilidades: Listado claro y estructurado de las vulnerabilidades encontradas, agrupadas por dependencia. Para cada dependencia, indica nombre, versión, lenguaje, vulnerabilidad, criticidad y breve descripción.
+- Si el proyecto no presenta vulnerabilidades, indícalo claramente en el resumen y en la sección de detalles.
+
+NO uses ningún tipo de formato especial, solo texto plano estructurado por secciones. Cada sección debe empezar con su título en mayúsculas y dos puntos (por ejemplo: TITULO PRINCIPAL: ...). Los datos importantes deben ir tras los dos puntos y en la misma línea.
+"""
+    )
+    response = asyncio.run(model.generate_content_async(gemini_prompt))
+    texto_informe = response.text.strip()
+
+    # Generar el PDF bonito
+    pdf = FPDF()
+    pdf.add_page()
+
+    def add_title(text):
+        pdf.set_font("Arial", 'BU', 18)  # Bold + Underline, grande
+        pdf.cell(0, 12, text, ln=1)
+        pdf.ln(2)
+
+    def add_section_title(text):
+        pdf.set_font("Arial", 'BU', 14)
+        pdf.cell(0, 10, text, ln=1)
+        pdf.ln(1)
+
+    def add_label_value(label, value):
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(40, 8, label + ':', ln=0)
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 8, value, ln=1)
+
+    def add_paragraph(text):
+        pdf.set_font("Arial", '', 12)
+        pdf.multi_cell(0, 8, text)
+        pdf.ln(1)
+
+    # Parsear el texto plano generado por Gemini
+    lines = texto_informe.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if not line:
+            i += 1
+            continue
+        if line.upper().startswith("TITULO PRINCIPAL:"):
+            add_title(line.split(":", 1)[1].strip())
+        elif line.upper().startswith("FECHA:"):
+            add_label_value("Fecha", line.split(":", 1)[1].strip())
+        elif line.upper().startswith("DESTINATARIO:"):
+            add_label_value("Destinatario", line.split(":", 1)[1].strip())
+        elif line.upper().startswith("ASUNTO:"):
+            add_label_value("Asunto", line.split(":", 1)[1].strip())
+        elif line.upper().startswith("INTRODUCCION:"):
+            add_section_title("Introducción")
+            add_paragraph(line.split(":", 1)[1].strip())
+        elif line.upper().startswith("RESUMEN:"):
+            add_section_title("Resumen")
+            add_paragraph(line.split(":", 1)[1].strip())
+        elif line.upper().startswith("DETALLES DE LAS VULNERABILIDADES:"):
+            add_section_title("Detalles de las Vulnerabilidades")
+            add_paragraph(line.split(":", 1)[1].strip())
+        else:
+            add_paragraph(line)
+        i += 1
+
+    # Guardar PDF temporalmente
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmpfile:
+        pdf.output(tmpfile.name)
+        tmpfile.flush()
+        tmp_path = tmpfile.name
+    
+    # Enviar PDF como descarga
+    filename = f"{proyecto.nombre.replace(' ', '_').lower()}_informe.pdf"
+    return send_file(tmp_path, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
 @app.route("/login", methods=["POST"])
 def login():

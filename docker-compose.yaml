@@ -46,7 +46,7 @@ services:
       DB_PASSWORD: password
     depends_on:
       - mariadb
-    command: /bin/sh -c "pip install flask_praetorian requests aiohttp nvdlib packaging google-generativeai && flask run --host=0.0.0.0 --port=5000 --debug"
+    command: /bin/sh -c "pip install flask_praetorian requests aiohttp nvdlib packaging google-generativeai fpdf && flask run --host=0.0.0.0 --port=5000 --debug"
 
   mariadb:
     platform: linux/amd64
