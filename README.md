@@ -16,4 +16,17 @@ Para ejecutar el proyecto, solo necesitas tener Docker instalado.
 1. Lanza el contenedor con el siguiente comando:
 
    ```bash
-   docker-compose -f docker.yaml up
+   docker compose -f 'docker-compose.yaml' up -d --build
+   ```
+## Usuarios ya creados 
+Usuario con roles admin:
+nombre: admin
+contraseña: admin
+
+Usuario sin rol de admin:
+nombre: usuario
+contraseña: usuario
+
+
+
+
