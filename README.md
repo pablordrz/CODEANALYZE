@@ -20,11 +20,15 @@ Para ejecutar el proyecto, solo necesitas tener Docker instalado.
    ```
 ## Usuarios ya creados 
 Usuario con roles admin:
+
 nombre: admin
+
 contraseña: admin
 
 Usuario sin rol de admin:
+
 nombre: usuario
+
 contraseña: usuario
 
 
