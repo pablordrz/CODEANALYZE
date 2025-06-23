@@ -420,12 +420,23 @@ class SbomGenerateResource(Resource):
         for dep in sboom.dependencias:
             purl = f"pkg:generic/{dep.nombre}@{dep.version}" if dep.version else f"pkg:generic/{dep.nombre}"
             
-            components.append({
+            component_data = {
                 "type": "library",
                 "name": dep.nombre,
                 "version": dep.version or "N/A",
                 "purl": purl
-            })
+            }
+            
+            # Añadir información del archivo de origen si está disponible
+            if dep.archivo_origen and dep.archivo_origen != "N/A":
+                component_data["properties"] = [
+                    {
+                        "name": "source_file",
+                        "value": dep.archivo_origen
+                    }
+                ]
+            
+            components.append(component_data)
 
         sbom_data = {
             "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",

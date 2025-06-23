@@ -128,6 +128,7 @@ class Dependencia(db.Model):
             'id': self.id,
             'nombre': self.nombre,
             'version': self.version or "No especificada",
+            'archivo_origen': self.archivo_origen or "N/A",
             'sboom_id': self.sboom_id,
             'vulnerabilidad_display': vulnerabilidad_display,  # CVE de mayor riesgo
             'nivel_riesgo_display': riesgo_display,            # Severidad de mayor riesgo

@@ -23,7 +23,7 @@
                             <i class="bi bi-plus fs-5"></i>
                         </a>
                     </div>
-                    <div class="list-group" id="proyectos-list">
+                    <div class="list-group" id="proyectos-list" style="max-height: 400px; overflow-y: auto;">
                         <div class="text-center p-3">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Cargando...</span>
@@ -44,13 +44,14 @@
                                 <tr>
                                     <th scope="col">Dependencia</th>
                                     <th scope="col">Versión</th>
+                                    <th scope="col">Origen</th>
                                     <th scope="col">Vulnerabilidad</th>
                                     <th scope="col">Nivel de Riesgo</th>
                                 </tr>
                             </thead>
                             <tbody id="dependencias-body">
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">Seleccione un proyecto para ver sus dependencias.</td>
+                                    <td colspan="5" class="text-center text-muted">Seleccione un proyecto para ver sus dependencias.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -241,7 +242,7 @@
 
             if (proyectoId == proyectoSeleccionadoId) {
                 const dependenciasBody = document.getElementById("dependencias-body");
-                dependenciasBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Seleccione un proyecto para ver sus dependencias.</td></tr>`;
+                dependenciasBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Seleccione un proyecto para ver sus dependencias.</td></tr>`;
                 document.getElementById('informe-pdf-btn').disabled = true;
                 document.getElementById('sbom-btn').disabled = true;
                 document.getElementById('scan-vulnerabilidades-btn').disabled = true;
@@ -258,7 +259,7 @@
         if (!proyectoId) return;
 
         const dependenciasBody = document.getElementById("dependencias-body");
-        dependenciasBody.innerHTML = `<tr><td colspan="4" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>`;
+        dependenciasBody.innerHTML = `<tr><td colspan="5" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>`;
 
         document.getElementById('informe-pdf-btn').disabled = false;
         document.getElementById('sbom-btn').disabled = false;
@@ -272,7 +273,7 @@
 
             if (!response.ok) {
                 if (response.status === 404) {
-                    dependenciasBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No se encontraron dependencias para este proyecto. Sube un archivo .zip para analizarlas.</td></tr>`;
+                    dependenciasBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No se encontraron dependencias para este proyecto. Sube un archivo .zip para analizarlas.</td></tr>`;
                     return;
                 }
                 throw new Error(`Error HTTP: ${response.status}`);
@@ -289,7 +290,7 @@
             dependenciasBody.innerHTML = '';
 
             if (dependencias.length === 0) {
-                dependenciasBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Este proyecto no tiene dependencias registradas.</td></tr>`;
+                dependenciasBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Este proyecto no tiene dependencias registradas.</td></tr>`;
                 return;
             }
 
@@ -309,6 +310,7 @@
                 row.innerHTML = `
                     <td>${dep.nombre}</td>
                     <td>${dep.version || 'No especificada'}</td>
+                    <td>${dep.archivo_origen || 'N/A'}</td>
                     <td>${dep.vulnerabilidad_display || 'N/A'}</td>
                     <td class="${claseRiesgo}">${dep.nivel_riesgo_display || 'N/A'}</td>`;
                 dependenciasBody.appendChild(row);
@@ -318,7 +320,7 @@
 
         } catch (error) {
             console.error("Error al cargar las dependencias:", error);
-            dependenciasBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error al cargar las dependencias.</td></tr>`;
+            dependenciasBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error al cargar las dependencias.</td></tr>`;
         }
     }
 
@@ -343,18 +345,8 @@
             return;
         }
     
-        // Muestra un mensaje al usuario para que sepa que la descarga ha comenzado
-        mostrarAlerta('Iniciando descarga del SBOM...', 'info');
-
-        const idProyecto = {{ chat_seleccionado|default('null') }};
-        if (!idProyecto) {
-            versionesPdfBtn.disabled = true;
-        } else {
-            versionesPdfBtn.disabled = false;
-        }
-    
         // 2. Definir la URL del endpoint
-        const apiUrl = `http://localhost:5001/proyectos/${idProyecto}/sbom`;
+        const apiUrl = `http://localhost:5001/proyectos/${proyectoSeleccionadoId}/sbom`;
 
         try {
             // 3. Realizar la petición GET con la cabecera de autorización
@@ -371,24 +363,38 @@
                 throw new Error(errorData.error || `Error del servidor: ${respuesta.status}`);
             }
     
-            // 5. Procesar la respuesta para crear el archivo y simular el clic
+            // 5. Obtener el nombre del proyecto para el nombre del archivo
+            const proyectoResponse = await fetch(`${API_BASE_URL}/proyectos/${proyectoSeleccionadoId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            let nombreProyecto = 'proyecto';
+            if (proyectoResponse.ok) {
+                const proyectoData = await proyectoResponse.json();
+                nombreProyecto = proyectoData.nombre || 'proyecto';
+            }
+            
+            // Limpiar el nombre del proyecto para usarlo como nombre de archivo
+            const nombreArchivo = nombreProyecto.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() + '_sbom.json';
+    
+            // 6. Procesar la respuesta para crear el archivo y simular el clic
             const blob = await respuesta.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             
             a.style.display = 'none';
             a.href = url;
-            a.download = 'sbom.json'; // Nombre del archivo a descargar
+            a.download = nombreArchivo; // Nombre del archivo con el nombre del proyecto
     
             document.body.appendChild(a);
             a.click();
     
-            // 6. Limpiar los recursos creados
+            // 7. Limpiar los recursos creados
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
     
         } catch (error) {
-            // 7. Si algo falla, mostrar un error al usuario
+            // 8. Si algo falla, mostrar un error al usuario
             console.error('Error al descargar el SBOM:', error);
             mostrarAlerta(`No se pudo descargar el archivo: ${error.message}`, 'error');
         }

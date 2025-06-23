@@ -4,22 +4,22 @@
   <form id="usuario-editar-form" data-id="{{ usuario.id }}">
     <div class="mb-3">
       <label for="nombre" class="form-label">Nombre</label>
-      <input type="text" class="form-control" id="nombre" name="nombre" required value="{{ usuario.nombre }}">
+      <input type="text" class="form-control" id="nombre" name="nombre" required>
     </div>
     <div class="mb-3">
       <label for="email" class="form-label">Email</label>
-      <input type="email" class="form-control" id="email" name="email" required value="{{ usuario.email }}">
+      <input type="email" class="form-control" id="email" name="email" required>
     </div>
     <div class="mb-3">
       <label for="username" class="form-label">Nombre de Usuario</label>
-      <input type="text" class="form-control" id="username" name="username" required value="{{ usuario.username }}">
+      <input type="text" class="form-control" id="username" name="username" required>
     </div>
     <div class="mb-3">
       <label for="password" class="form-label">Contraseña</label>
       <input type="password" class="form-control" id="password" name="password" placeholder="Dejar en blanco para no cambiar">
     </div>
     <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin" {% if usuario.is_admin %}checked{% endif %}>
+      <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin">
       <label class="form-check-label" for="is_admin">Administrador</label>
     </div>
     <button type="submit" class="btn btn-success">Actualizar Usuario</button>
@@ -31,10 +31,32 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("usuario-editar-form");
+  const userId = form.dataset.id;
+  const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+
+  // --- Cargar datos del usuario al iniciar la página ---
+  fetch(`http://localhost:5001/usuarios/${userId}`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("No se pudo cargar la información del usuario.");
+    return res.json();
+  })
+  .then(usuario => {
+    document.getElementById("nombre").value = usuario.nombre;
+    document.getElementById("email").value = usuario.email;
+    document.getElementById("username").value = usuario.username;
+    if (usuario.roles && usuario.roles.includes("admin")) {
+      document.getElementById("is_admin").checked = true;
+    }
+  })
+  .catch(err => {
+    document.getElementById("mensaje").innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+  });
+  
+  // --- Manejar el envío del formulario ---
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-
-    const userId = form.dataset.id;
 
     const body = {
       nombre: document.getElementById("nombre").value,
@@ -48,7 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
       body.password = password;
     }
 
-    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
     fetch(`http://localhost:5001/usuarios/${userId}`, {
       method: "PUT",
       headers: {
@@ -65,7 +86,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("mensaje").innerHTML = `
         <div class="alert alert-success">Usuario actualizado correctamente. Redirigiendo a la gestión de usuarios...</div>`;
       
-      // Redirigir a la página de gestión de usuarios después de 2 segundos
       setTimeout(() => {
         window.location.href = '/usuarios';
       }, 2000);

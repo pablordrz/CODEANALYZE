@@ -4,7 +4,7 @@
     <div class="card-body">
       <h1 class="card-title text-center mb-4">Introduce la versión de tus dependencias</h1>
       <form id="form-versiones-dependencias">
-        <div id="dependencias-lista">
+        <div id="dependencias-lista" style="max-height: 400px; overflow-y: auto;">
           <!-- Aquí se cargará la tabla de dependencias con inputs para la versión -->
         </div>
         <div class="d-grid mt-4">
@@ -38,11 +38,12 @@ async function cargarDependencias() {
   });
   const data = await response.json();
   const dependencias = data.dependencias || [];
-  let html = '<table class="table table-bordered"><thead><tr><th>Dependencia</th><th>Versión</th></tr></thead><tbody>';
+  let html = '<table class="table table-bordered"><thead><tr><th>Dependencia</th><th>Versión</th><th>Origen</th></tr></thead><tbody>';
   dependencias.forEach(dep => {
     html += `<tr>
       <td>${dep.nombre}</td>
       <td><input type="text" class="form-control version-input" name="version_${dep.id}" value="${dep.version === 'No especificada' ? '' : dep.version}" placeholder="Ej: 1.2.3" pattern="^[0-9]+(\.[0-9]+)*$" title="Formato: números separados por puntos (ej: 1, 1.2, 2.0.1)"></td>
+      <td>${dep.archivo_origen || 'N/A'}</td>
     </tr>`;
   });
   html += '</tbody></table>';
