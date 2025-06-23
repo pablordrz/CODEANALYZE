@@ -1,3 +1,26 @@
+<style>
+  /* Estado inicial de los elementos a animar */
+  .animate-on-scroll {
+    opacity: 0;
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+  .fade-in-left {
+    transform: translateX(-40px);
+  }
+  .fade-in-right {
+    transform: translateX(40px);
+  }
+  .fade-in-up {
+    transform: translateY(40px);
+  }
+
+  /* Estado final (visible) cuando el elemento entra en la pantalla */
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+</style>
+
 <div class="container-fluid m-0 p-0" id="hero">
     <div class="container-fluid pt-3 d-flex flex-column justify-content-end align-items-center" >
         <div class="row" ></div>
@@ -62,40 +85,44 @@
     </div>
 </div>
 
-<div class="container my-5 py-3"> <div class="row "> <div class="col-12 col-lg-6 d-flex align-items-center p-5 justify-content-lg-end justify-content-center"> <img src="{{ url_for('static', filename='chatsvaia.png') }}" alt="Imagen chatbot svaia" width="300px" class="sombra">
+<div class="container my-5 py-3">
+    <div class="row">
+        <div class="col-12 col-lg-6 d-flex align-items-center p-5 justify-content-lg-end justify-content-center animate-on-scroll fade-in-left">
+            <img src="{{ url_for('static', filename='chatsvaia.png') }}" alt="Imagen chatbot svaia" width="300px" class="sombra">
         </div>
-        <div class="col-12 col-lg-6 ">                 <div class="row pt-2 d-flex align-items-center gap-3 justify-content-lg-start justify-content-center fade-in-right"> <div class="col-12 col-lg-1 pb-lg-5 ">
-                    <div class="circle">1</div> 
-                </div>  
-                <div class="col-6 col-lg-7 mx-2 " style="max-width: max-content;"> 
+        <div class="col-12 col-lg-6">
+            <div class="row pt-2 d-flex align-items-center gap-3 justify-content-lg-start justify-content-center animate-on-scroll fade-in-right">
+                <div class="col-12 col-lg-1 pb-lg-5">
+                    <div class="circle">1</div>
+                </div>
+                <div class="col-6 col-lg-7 mx-2" style="max-width: max-content;">
                     <h4 class="text-primary">Describe tu proyecto</h4>
-                    <p class="text-primary ">Describe tu proyecto usando nuestro chat</p>
-                </div>  
+                    <p class="text-primary">Describe tu proyecto usando nuestro chat</p>
+                </div>
             </div>
-            <div class="row d-flex align-items-center gap-3 justify-content-lg-start justify-content-center fade-in-right"> <div class="col-6 col-lg-1 pb-lg-5 ">
+            <div class="row d-flex align-items-center gap-3 justify-content-lg-start justify-content-center animate-on-scroll fade-in-right" style="transition-delay: 200ms;">
+                <div class="col-6 col-lg-1 pb-lg-5">
                     <div class="circle">2</div>
                 </div>
-                <div class="col-6 col-lg-7 mx-2 ">
+                <div class="col-6 col-lg-7 mx-2">
                     <h4 class="text-primary">Recibe sugerencias</h4>
                     <p class="text-primary">Nuestra IA buscará vulnerabilidades que puedan ser de tu interés</p>
-                </div>  
+                </div>
             </div>
-            <div class="row pt-2 d-flex align-items-center gap-3 justify-content-lg-start justify-content-center fade-in-right"> <div class="col-6 col-lg-1 pb-lg-5">
+            <div class="row pt-2 d-flex align-items-center gap-3 justify-content-lg-start justify-content-center animate-on-scroll fade-in-right" style="transition-delay: 400ms;">
+                <div class="col-6 col-lg-1 pb-lg-5">
                     <div class="circle">3</div>
                 </div>
-                <div class="col-6 col-lg-7 mx-2 ">
+                <div class="col-6 col-lg-7 mx-2">
                     <h4 class="text-primary">Más detalles</h4>
                     <p class="text-primary">Sigue hablando con la IA para obtener más información</p>
-                </div>  
+                </div>
             </div>
         </div>
     </div>
-
 </div>
 
-
 <section id="non-padding" class="container bg-secondary w-100">
-
     <div class="curved-sectiow-donw row mb-0 m-0 p-0">
         <svg viewBox="0 -40 2000 80" class="curved-svg">
             <path fill="white" d="M0,40 C480,-40, 1480,-40, 2000,40 L2000,-500 L0,-500 Z"></path>
@@ -105,98 +132,72 @@
     <div class="row d-flex justify-content-center d-flex align-items-center text-center m-0 p-0">
         <h3 class="m-0 p-0 mb-1">Tabla de precios</h3>
         <p class="mb-5 p-0"><small>Elige la modalidad que mejor se adapte a tus necesidades.</small></p>
-        
     </div>
+
     <div class="row d-flex justify-content-center align-items-start m-0 p-0 gap-3">
-        <div class="col-md-3 d-flex justify-content-md-end  justify-content-center align-items-center px-0 w-0">
-          <div id="card-pading" class="card border-light mb-md-5 mb-1 sombra w-100 pb-2" style="max-width:  350px;">
-              <div class="card-header bg-primary text-white py-1">Básico</div>
-              <img src="https://placehold.co/600x400/FFFFFF/000000/png?text=Básico" class="card-img-top p-3" alt="Plan Básico">
-              <div class="card-body pb-0">
-                <h4 class="card-title">0€ <small class="text-body-secondary">/mes</small></h4>
-                <p class="card-text my-0 letra_pequeña"><small>1 proyecto</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>10 sugerencias</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Sin soporte</small></p>
-                <a type="button" class="btn btn-outline-primary w-100 my-1 mt-3">Comenzar</a>
-              </div>
-          </div>
+        <div class="col-md-3 d-flex justify-content-md-end justify-content-center align-items-center px-0 animate-on-scroll fade-in-up">
+            <div class="card border-light mb-md-5 mb-1 sombra w-100 pb-2" style="max-width: 350px;">
+                <div class="card-header bg-primary text-white py-1">Básico</div>
+                <div class="card-body pb-0">
+                    <h4 class="card-title">0€ <small class="text-body-secondary">/mes</small></h4>
+                    <p class="card-text my-0 letra_pequeña"><small>1 proyecto</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>10 sugerencias</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Sin soporte</small></p>
+                    </div>
+            </div>
         </div>
-          
-        <div class="col justify-content-center col-md-3  justify-content-center d-flex align-items-center px-0">
-          <div id="card-pading" class="card border-light mb-md-5 mb-1 sombra w-100 pb-2" style="max-width:  350px;">
-              <div class="card-header bg-primary text-white py-1">Profesional</div>
-              <img src="https://placehold.co/600x400/DDDDDD/000000/png?text=Profesional" class="card-img-top p-3" alt="Plan Profesional">
-              <div class="card-body pb-0">
-                <h4 class="card-title">19,99€ <small class="text-body-secondary">/mes</small></h4>
-                <p class="card-text my-0 letra_pequeña"><small>10 proyectos</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>100 sugerencias</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Soporte por chat</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Acceso a la API</small></p>
-                <a type="button" class="btn btn-outline-primary w-100 my-1 mt-3">Comenzar</a>
-              </div>
-          </div>
+        
+        <div class="col justify-content-center col-md-3 justify-content-center d-flex align-items-center px-0 animate-on-scroll fade-in-up" style="transition-delay: 200ms;">
+            <div class="card border-light mb-md-5 mb-1 sombra w-100 pb-2" style="max-width: 350px;">
+                <div class="card-header bg-primary text-white py-1">Profesional</div>
+                <div class="card-body pb-0">
+                    <h4 class="card-title">19,99€ <small class="text-body-secondary">/mes</small></h4>
+                    <p class="card-text my-0 letra_pequeña"><small>10 proyectos</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>100 sugerencias</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Soporte por chat</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Acceso a la API</small></p>
+                    </div>
+            </div>
         </div>
-        <div class="col-md-3 d-flex justify-content-md-start  justify-content-center align-items-center px-0 py-mb-0">
-          <div id="card-pading" class="card border-light mb-md-5 mb-5 sombra w-100" style="max-width:  350px;">
-              <div class="card-header bg-primary text-white py-1">Empresarial</div>
-              <img src="https://placehold.co/600x400/BBBBBB/000000/png?text=Empresarial" class="card-img-top p-3" alt="Plan Empresarial">
-              <div class="card-body pb-2">
-                <h4 class="card-title">49,99€ <small class="text-body-secondary">/mes</small></h4>
-                <p class="card-text my-0 letra_pequeña"><small>100 proyectos</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Sugerencias ilimitadas</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Soporte por chat</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Soporte por teléfono</small></p>
-                <p class="card-text my-0 letra_pequeña"><small>Acceso a la API</small></p>
-              <a type="button" class="btn btn-outline-primary w-100 my-1 mt-3">Comenzar</a>
-      
-              </div>
-          </div>
+
+        <div class="col-md-3 d-flex justify-content-md-start justify-content-center align-items-center px-0 py-mb-0 animate-on-scroll fade-in-up" style="transition-delay: 400ms;">
+            <div class="card border-light mb-md-5 mb-5 sombra w-100" style="max-width: 350px;">
+                <div class="card-header bg-primary text-white py-1">Empresarial</div>
+                <div class="card-body pb-2">
+                    <h4 class="card-title">49,99€ <small class="text-body-secondary">/mes</small></h4>
+                    <p class="card-text my-0 letra_pequeña"><small>100 proyectos</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Sugerencias ilimitadas</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Soporte por chat</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Soporte por teléfono</small></p>
+                    <p class="card-text my-0 letra_pequeña"><small>Acceso a la API</small></p>
+                    </div>
+            </div>
         </div>
     </div>
 </section>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // Función para manejar el envío del formulario de login
+        // --- Manejo del formulario de login (sin cambios) ---
         const loginForm = document.getElementById("login-form");
-    
         if (loginForm) {
             loginForm.addEventListener("submit", async function (event) {
-                event.preventDefault(); // Evitar el envío del formulario tradicional
-    
-                // Obtener los datos del formulario
+                event.preventDefault();
                 const username = document.getElementById("username").value;
                 const password = document.getElementById("password").value;
-    
-                // Preparar el cuerpo de la solicitud
-                const requestBody = {
-                    username: username,
-                    password: password
-                };
-    
+                const requestBody = { username: username, password: password };
                 try {
-                    // Hacer la solicitud POST a la API para autenticar al usuario
                     const response = await fetch('http://localhost:5001/auth', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(requestBody),
-                        credentials: 'include'  // Enviar cookies de sesión si las hay
+                        credentials: 'include'
                     });
-    
-                    // Manejar la respuesta de la API
                     if (response.ok) {
                         const data = await response.json();
-                        const token = data.access_token;
-    
-                        // Almacenar el token en sessionStorage (o cookies si prefieres)
-                        sessionStorage.setItem('access_token', token);
-    
-                        // Mostrar mensaje de éxito
+                        sessionStorage.setItem('access_token', data.access_token);
                         alert('Login exitoso');
-                        // Redirigir a la página del proyecto
-                        window.location.href = '/proyecto';  // Cambia la ruta según tu aplicación
+                        window.location.href = '/proyecto';
                     } else {
                         const errorData = await response.json();
                         alert('Credenciales inválidas: ' + errorData.message);
@@ -208,34 +209,24 @@
             });
         }
     
-        // Animación de los elementos con clase "card-pading"
-        const elementos = document.querySelectorAll(".card-pading");
-        const observer = new IntersectionObserver((entradas) => {
-            entradas.forEach((entrada) => {
-                if (entrada.isIntersecting) {
-                    entrada.target.classList.add("visible");
+        // --- Lógica de animación para todos los elementos ---
+        const animatedElements = document.querySelectorAll(".animate-on-scroll");
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                // Cuando el elemento es visible en la pantalla
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("visible");
                 }
             });
-        }, { threshold: 0.2 });
-    
-        elementos.forEach((elemento) => {
-            observer.observe(elemento);
+        }, {
+            threshold: 0.1 // La animación se dispara cuando el 10% del elemento es visible
         });
     
-        // Animación de los elementos con clase "fade-in-right"
-        const fadeInRightElementos = document.querySelectorAll(".fade-in-right");
-        const fadeInRightObserver = new IntersectionObserver((entradas) => {
-            entradas.forEach((entrada) => {
-                if (entrada.isIntersecting) {
-                    entrada.target.classList.add("visible");
-                }
-            });
-        }, { threshold: 0.2 });
-    
-        fadeInRightElementos.forEach((elemento) => {
-            fadeInRightObserver.observe(elemento);
+        // Observar cada elemento que debe ser animado
+        animatedElements.forEach((element) => {
+            observer.observe(element);
         });
     });
-    </script>
+</script>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
