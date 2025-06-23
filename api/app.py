@@ -114,6 +114,7 @@ class ProyectoUploadResource(Resource):
                         dependencia = Dependencia(
                             nombre=nombre,
                             version=dep.get("version"),
+                            archivo_origen=dep.get("archivo_origen"),
                             sboom_id=sboom.id
                         )
                         db.session.add(dependencia)

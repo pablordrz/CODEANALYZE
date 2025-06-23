@@ -63,68 +63,68 @@ Actúa como un analista experto en seguridad de software y gestión de dependenc
 
         _, ext = os.path.splitext(name_lower)
         return ext in source_code_extensions
-
-    async def _analyze_file(self, file_path: str, filename: str) -> List[Dict[str, Any]]:
+    
+    async def _analyze_file(self, filepath: str, filename: str) -> List[Dict[str, Any]]:
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
 
-            if not content or len(content) > 500_000:
-                logger.warning(f"⚠ El archivo '{filename}' está vacío o es demasiado grande. Saltando.")
-                return []
-
-            logger.info(f"🔍 Analizando archivo: {filename}")
-
             prompt = self.prompt_template.format(filename=filename, content=content)
+            logger.debug(f"🔍 Enviando archivo a Gemini: {filename}")
+
             response = await self.model.generate_content_async(
                 prompt,
-                generation_config=self.generation_config
+                generation_config=self.generation_config,
             )
 
-            logger.debug(f"📥 Respuesta cruda recibida de Gemini para {filename}: {response.text[:500]}...")
+            # Aseguramos formato JSON válido
+            text = response.text.strip()
+            if text.startswith("```json"):
+                text = text[7:].strip("` \n")
+            data = json.loads(text)
 
-            try:
-                result = json.loads(response.text)
-                if 'dependencies' in result and isinstance(result['dependencies'], list):
-                    return result['dependencies']
-                else:
-                    logger.warning(f"⚠ Respuesta sin campo 'dependencies' válido en {filename}.")
-                    return []
-            except json.JSONDecodeError as jde:
-                logger.error(f"❌ Error decodificando JSON para {filename}: {str(jde)}")
-                logger.error(f"❌ Respuesta cruda: {response.text}")
-                return []
-
+            return data.get("dependencies", [])
         except Exception as e:
-            logger.exception(f"❌ Error al analizar el archivo '{filename}': {str(e)}")
+            logger.warning(f"⚠️ Error analizando {filename}: {str(e)}")
             return []
 
     async def analyze_project(self, directory_path: str) -> List[Dict[str, Any]]:
         tasks = []
+        file_map = {}
+
         for root, _, files in os.walk(directory_path):
             for filename in files:
                 if self._is_relevant_file(filename):
                     file_path = os.path.join(root, filename)
+                    rel_path = os.path.relpath(file_path, directory_path)
+                    file_map[filename] = rel_path  # guardar la ruta relativa
                     tasks.append(self._analyze_file(file_path, filename))
 
         logger.info(f"✅ Se van a analizar {len(tasks)} archivos relevantes con Gemini...")
 
         results_from_files = await asyncio.gather(*tasks)
 
-        unique_dependencies: Set[Tuple[str, Any, str]] = set()
-        for result_list in results_from_files:
+        unique_dependencies: Set[Tuple[str, Any, str, str]] = set()
+        for result_list, task_filename in zip(results_from_files, file_map.keys()):
+            archivo_origen = file_map[task_filename]
             for dep in result_list:
                 name = dep.get("name")
                 if name:
                     unique_dependencies.add((
                         name,
                         dep.get("version"),
-                        dep.get("type", "runtime")
+                        dep.get("type", "runtime"),
+                        archivo_origen
                     ))
 
         final_list = [
-            {"name": name, "version": version, "type": type_}
-            for name, version, type_ in sorted(unique_dependencies)
+            {
+                "name": name,
+                "version": version,
+                "type": type_,
+                "archivo_origen": archivo_origen
+            }
+            for name, version, type_, archivo_origen in sorted(unique_dependencies)
         ]
 
         logger.info(f"✅ Análisis completado. Se encontraron {len(final_list)} dependencias únicas.")

@@ -101,6 +101,7 @@ class Dependencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     version = db.Column(db.String(50), nullable=True)
+    archivo_origen = db.Column(db.String, nullable=True)
     sboom_id = db.Column(db.Integer, db.ForeignKey('sboom.id'), nullable=False)
     vulnerabilidades = db.relationship('Vulnerabilidad', backref='dependencia', lazy=True, cascade="all, delete-orphan")
 
